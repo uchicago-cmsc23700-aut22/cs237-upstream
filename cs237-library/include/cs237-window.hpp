@@ -45,6 +45,12 @@ public:
     //! return the logical device for this window
     VkDevice device () const { return this->_app->_device; }
 
+    //! the graphics queue
+    VkQueue graphicsQ () const { return this->_app->_queues.graphics; }
+
+    //! the presentation queue
+    VkQueue presentationQ () const { return this->_app->_queues.present; }
+
     //! Refresh the contents of the window.  This method is also invoked
     //! on Refresh events.
     void refresh ()
@@ -134,10 +140,6 @@ protected:
     // Vulkan state for rendering
     VkSurfaceKHR _surf;                 //!< the Vulkan surface to render to
     SwapChain _swap;                    //!< buffer-swapping information
-
-    VkSemaphore _imageAvailable;
-    VkSemaphore _renderFinished;
-    VkFence _inFlight;
 
     //! \brief the Window base-class constructor
     //! \param app      the owning application

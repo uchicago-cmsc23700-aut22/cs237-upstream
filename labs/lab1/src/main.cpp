@@ -89,13 +89,19 @@ private:
     VkRenderPass _renderPass;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
+    std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _cmdPool;
     VkCommandBuffer _cmdBuffer;
+    VkSemaphore _imageAvailable;
+    VkSemaphore _renderFinished;
+    VkFence _inFlight;
 
     //! initialize the `_renderPass` field
     void _initRenderPass ();
     //! initialize the `_pipelineLayout` and `_graphicsPipeline` fields
     void _initPipeline ();
+    //! record the rendering commands
+    void _recordCommandBuffer (uint32_t imageIdx);
 
 };
 
