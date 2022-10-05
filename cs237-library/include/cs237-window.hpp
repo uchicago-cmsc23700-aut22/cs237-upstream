@@ -153,6 +153,12 @@ protected:
     //!        instance variable.
     void _createSwapChain();
 
+    //! the graphics queue-family index
+    uint32_t _graphicsQIdx () const { return this->_app->_qIdxs.graphics; }
+
+    //! the presentation queue
+    uint32_t _presentationQIdx () const { return this->_app->_qIdxs.present; }
+
 };
 
 } // namespace cs237

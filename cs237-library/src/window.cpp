@@ -74,44 +74,6 @@ Window::Window (Application *app, CreateWindowInfo const &info)
     // set up the swap chain for the surface
     this->_createSwapChain ();
 
-    auto dev = this->device();
-
-#ifdef XXX
-    // allocate the command pool and buffer objects
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = this->_app->_qIdxs.graphics;
-
-    if (vkCreateCommandPool(dev, &poolInfo, nullptr, &this->_cmdPool) != VK_SUCCESS) {
-        ERROR("unable to create command pool!");
-    }
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = this->_cmdPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    if (vkAllocateCommandBuffers(dev, &allocInfo, &this->_cmdBuffer) != VK_SUCCESS) {
-        ERROR("unable to allocate command buffers!");
-    }
-#endif
-
-    // allocate synchronization objects
-    VkSemaphoreCreateInfo semInfo{};
-    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    if ((vkCreateSemaphore(dev, &semInfo, nullptr, &this->_imageAvailable) != VK_SUCCESS)
-    || (vkCreateSemaphore(dev, &semInfo, nullptr, &this->_renderFinished) != VK_SUCCESS)
-    || (vkCreateFence(dev, &fenceInfo, nullptr, &this->_inFlight) != VK_SUCCESS)) {
-        ERROR("failed to create synchronization objects for a frame!");
-    }
-
 }
 
 Window::~Window ()
