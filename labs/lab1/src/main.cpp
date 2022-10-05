@@ -92,6 +92,8 @@ private:
     std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _cmdPool;
     VkCommandBuffer _cmdBuffer;
+    VkBuffer _vertBuffer;
+    VkDeviceMemory _vertBufferMemory;
     VkSemaphore _imageAvailable;
     VkSemaphore _renderFinished;
     VkFence _inFlight;
@@ -100,6 +102,8 @@ private:
     void _initRenderPass ();
     //! initialize the `_pipelineLayout` and `_graphicsPipeline` fields
     void _initPipeline ();
+    //! initialize the vertex buffer
+    void _initVertexBuffer ();
     //! record the rendering commands
     void _recordCommandBuffer (uint32_t imageIdx);
 
@@ -123,6 +127,14 @@ void Lab1Window::_initRenderPass ()
 }
 
 void Lab1Window::_initPipeline ()
+{
+}
+
+void Lab1Window::_initVertexBuffer ()
+{
+}
+
+void Lab1Window::_recordCommandBuffer (uint32_t imageIdx)
 {
 }
 
