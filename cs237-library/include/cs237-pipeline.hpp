@@ -77,28 +77,6 @@ void destroyVertexInputInfo (VkPipelineVertexInputStateCreateInfo &info)
     }
 }
 
-//! a wrapper for the Vulkan pipeline state
-class Pipeline {
-public:
-    Pipeline (
-        Shaders const &shaders,
-        std::vector<VkVertexInputBindingDescription> descs,
-        std::vector<VkVertexInputAttributeDescription> attrs);
-
-    ~Pipeline ();
-
-private:
-    VkRenderPass _renderPass;
-    VkPipelineLayout _pipelineLayout;
-    VkPipeline _graphicsPipeline;
-    VkCommandPool _cmdPool;
-    VkCommandBuffer _cmdBuffer;
-    VkSemaphore _imageAvailable;
-    VkSemaphore _renderFinished;
-    VkFence _inFlight;
-
-};
-
 } // namespace cs237
 
 #endif // !_CS237_PIPELINE_HPP_

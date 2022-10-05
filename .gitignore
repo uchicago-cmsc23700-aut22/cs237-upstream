@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Compiled shader programs
+*.spv
+
+# stuff in the build directory
+build/*
+
+# macOS
+.DS_Store
