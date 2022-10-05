@@ -34,8 +34,9 @@
 # Compiled shader programs
 *.spv
 
-# stuff in the build directory
+# repo-specific stuff
 build/*
+cs237-library/include/cs237-config.h
 
 # macOS
 .DS_Store
