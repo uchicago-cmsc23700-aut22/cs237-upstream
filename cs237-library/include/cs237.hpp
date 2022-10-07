@@ -26,8 +26,12 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-/* GLM include files */
+/* GLM include files; we include the extensions, such as transforms
+ * and enable the experimental support for `to_string`
+ */
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/ext.hpp"
 
 /* CS23700 support files */
 #include "cs237-types.hpp"
