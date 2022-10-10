@@ -21,6 +21,7 @@ namespace cs237 {
 
     class Application;
     class Window;
+    class Buffer;
     class Shaders;
 
 } /* namespace cs237 */

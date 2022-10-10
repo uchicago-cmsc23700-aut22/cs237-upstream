@@ -51,9 +51,6 @@ Application::Application (std::vector<const char *> &args, std::string const &na
     // initialize GLFW
     glfwInit();
 
-//    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-//    GLFWwindow* window = glfwCreateWindow(800, 600, name.c_str(), nullptr, nullptr);
-
     // create a Vulkan instance
     this->_createInstance();
 }
@@ -164,6 +161,26 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
     }
 
     ERROR("no available GPUs that support graphics");
+
+}
+
+int32_t Application::_findMemory (
+    uint32_t reqTypeBits,
+    VkMemoryPropertyFlags reqProps) const
+{
+    // get the memory properties for the device
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(this->_gpu, &memProps);
+
+    for (int32_t i = 0; i < memProps.memoryTypeCount; i++) {
+        if ((reqTypeBits & (1 << i))
+        && (memProps.memoryTypes[i].propertyFlags & reqProps) == reqProps)
+        {
+            return i;
+        }
+    }
+
+    return -1;
 
 }
 

@@ -92,6 +92,26 @@ public:
         return glfwWindowShouldClose (this->_win);
     }
 
+    //!{
+    //! Input handling methods; override these in the derived window
+    //! classes to do something useful.
+    virtual void key (int key, int scancode, int action, int mods);
+    virtual void cursorPos (double xpos, double ypos);
+    virtual void cursorEnter (bool entered);
+    virtual void mouseButton (int button, int action, int mods);
+    virtual void scroll (double xoffset, double yoffset);
+    //}
+
+    //!{
+    //! enable/disable handling of events
+    void enableKeyEvent (bool enable);
+    void setCursorMode (int mode);
+    void enableCursorPosEvent (bool enable);
+    void enableCursorEnterEvent (bool enable);
+    void enableMouseButtonEvent (bool enable);
+    void enableScrollEvent (bool enable);
+    //}
+
 protected:
     //! information about swap-chain support
     struct SwapChainDetails {
@@ -136,7 +156,12 @@ protected:
     Application *_app;                  //!< the owning application
     GLFWwindow *_win;                   //!< the underlying window
     int _wid, _ht;	                //!< window dimensions
-    bool _isVis;                        //!< true, when the window is visible
+    bool _isVis;                        //!< true when the window is visible
+    bool _keyEnabled;                   //!< true when the Key callback is enabled
+    bool _cursorPosEnabled;             //!< true when the CursorPos callback is enabled
+    bool _cursorEnterEnabled;           //!< true when the CursorEnter callback is enabled
+    bool _mouseButtonEnabled;           //!< true when the MouseButton callback is enabled
+    bool _scrollEnabled;                //!< true when the Scroll callback is enabled
     // Vulkan state for rendering
     VkSurfaceKHR _surf;                 //!< the Vulkan surface to render to
     SwapChain _swap;                    //!< buffer-swapping information

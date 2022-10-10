@@ -2,6 +2,8 @@
  *
  * Support code for CMSC 23700 Autumn 2022.
  *
+ * This is the main header file for the CS237 Library.
+ *
  * \author John Reppy
  */
 
@@ -29,15 +31,6 @@
 /* GLM include files */
 #include <glm/glm.hpp>
 
-/* CS23700 support files */
-#include "cs237-types.hpp"
-
-#include "json.hpp"
-#include "cs237-shader.hpp"
-#include "cs237-pipeline.hpp"
-#include "cs237-application.hpp"
-#include "cs237-window.hpp"
-
 namespace cs237 {
 
 //! function for reporting errors by raising a runtime exception
@@ -51,5 +44,16 @@ inline void ReportError (const char *file, int line, std::string const &msg)
 } // namespace cs237
 
 #define ERROR(msg)      cs237::ReportError (__FILE__, __LINE__, msg);
+
+/* CS23700 support files */
+#include "cs237-types.hpp"
+
+#include "json.hpp"
+#include "cs237-shader.hpp"
+#include "cs237-pipeline.hpp"
+#include "cs237-application.hpp"
+#include "cs237-window.hpp"
+#include "cs237-memory-obj.hpp"
+#include "cs237-buffer.hpp"
 
 #endif // !_CS237_HPP_

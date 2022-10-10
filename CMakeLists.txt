@@ -39,10 +39,16 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 
-# find GLM, GLFW, and Vulkan
-find_package(glfw 3.3 REQUIRED)
+# find GLM, GLFW, and Vulkan; note that the naming conventions for GLFW and
+# Vulkan differ between macOS and Linux
 find_package(glm 0.9.9 REQUIRED)
+if (${CMAKE_HOST_APPLE})
+find_package(glfw 3.3 REQUIRED)
 find_package(vulkan 1.3 REQUIRED)
+else()
+find_package(glfw3 3.3 REQUIRED)
+find_package(Vulkan 1.3 REQUIRED)
+endif()
 
 # compiler for shader programs
 #

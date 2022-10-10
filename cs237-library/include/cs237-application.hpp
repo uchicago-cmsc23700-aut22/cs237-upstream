@@ -23,6 +23,8 @@ namespace cs237 {
 class Application {
 
 friend class Window;
+friend class Buffer;
+friend class MemoryObj;
 
 public:
 
@@ -84,6 +86,14 @@ protected:
     //! \param reqFeatures  points to a structure specifying the required features
     //!                     of the selected device.
     void _selectDevice (VkPhysicalDeviceFeatures *reqFeatures = nullptr);
+
+    //! \brief A helper function to identify the index of a device memory type
+    //!        that has the required type and properties
+    //! \param reqTypeBits  bit mask that specifies the possible memory types
+    //! \param reqProps     memory property bit mask
+    //! \return the index of the lowest set bit in reqTypeBits that has the
+    //!         required properties.  If no such memory exists, then -1 is returned.
+    int32_t _findMemory (uint32_t reqTypeBits, VkMemoryPropertyFlags reqProps) const;
 
     //! \brief A helper function to identify the queue-family indices for the
     //!        physical device that we are using.

@@ -30,11 +30,46 @@ static void reshapeCB (GLFWwindow *win, int wid, int ht)
     winObj->reshape (wid, ht);
 }
 
-// wrapper function for Reshape callback
+// wrapper function for Iconify callback
 static void iconifyCB (GLFWwindow *win, int iconified)
 {
     auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
     winObj->iconify (iconified != 0);
+}
+
+// wrapper function for Key callback
+static void keyCB (GLFWwindow *win, int key, int scancode, int action, int mods)
+{
+    auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
+    winObj->key (key, scancode, action, mods);
+}
+
+// wrapper function for CursorPos callback
+static void cursorPosCB (GLFWwindow *win, double xpos, double ypos)
+{
+    auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
+    winObj->cursorPos (xpos, ypos);
+}
+
+// wrapper function for CursorEnter callback
+static void cursorEnterCB (GLFWwindow *win, int entered)
+{
+    auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
+    winObj->cursorEnter (entered == GLFW_TRUE);
+}
+
+// wrapper function for MouseButton callback
+static void mouseButtonCB (GLFWwindow *win, int button, int action, int mods)
+{
+    auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
+    winObj->mouseButton (button, action, mods);
+}
+
+// wrapper function for Scroll callback
+static void scrollCB (GLFWwindow *win, double xoffset, double yoffset)
+{
+    auto winObj = static_cast<Window *>(glfwGetWindowUserPointer (win));
+    winObj->scroll (xoffset, yoffset);
 }
 
 /******************** class Window methods ********************/
@@ -87,17 +122,101 @@ Window::~Window ()
     glfwDestroyWindow (this->_win);
 }
 
-//! method invoked on Reshape events.
 void Window::reshape (int wid, int ht)
 {
     this->_wid = wid;
     this->_ht = ht;
 }
 
-//! method invoked on Iconify events.
 void Window::iconify (bool iconified)
 {
     this->_isVis = !iconified;
+}
+
+void Window::key (int key, int scancode, int action, int mods) { }
+void Window::cursorPos (double xpos, double ypos) { }
+void Window::cursorEnter (bool entered) { }
+void Window::mouseButton (int button, int action, int mods) { }
+void Window::scroll (double xoffset, double yoffset) { }
+
+void Window::enableKeyEvent (bool enable)
+{
+    if (this->_keyEnabled && (! enable)) {
+        // disable the callback
+        this->_keyEnabled = false;
+        glfwSetKeyCallback(this->_win, nullptr);
+    }
+    else if ((! this->_keyEnabled) && enable) {
+        // enable the callback
+        this->_keyEnabled = true;
+        glfwSetKeyCallback(this->_win, keyCB);
+    }
+
+}
+
+void Window::setCursorMode (int mode)
+{
+    glfwSetInputMode (this->_win, GLFW_CURSOR, mode);
+}
+
+void Window::enableCursorPosEvent (bool enable)
+{
+    if (this->_cursorPosEnabled && (! enable)) {
+        // disable the callback
+        this->_cursorPosEnabled = false;
+        glfwSetCursorPosCallback(this->_win, nullptr);
+    }
+    else if ((! this->_cursorPosEnabled) && enable) {
+        // enable the callback
+        this->_cursorPosEnabled = true;
+        glfwSetCursorPosCallback(this->_win, cursorPosCB);
+    }
+
+}
+
+void Window::enableCursorEnterEvent (bool enable)
+{
+    if (this->_cursorEnterEnabled && (! enable)) {
+        // disable the callback
+        this->_cursorEnterEnabled = false;
+        glfwSetCursorEnterCallback(this->_win, nullptr);
+    }
+    else if ((! this->_cursorEnterEnabled) && enable) {
+        // enable the callback
+        this->_cursorEnterEnabled = true;
+        glfwSetCursorEnterCallback(this->_win, cursorEnterCB);
+    }
+
+}
+
+void Window::enableMouseButtonEvent (bool enable)
+{
+    if (this->_mouseButtonEnabled && (! enable)) {
+        // disable the callback
+        this->_mouseButtonEnabled = false;
+        glfwSetMouseButtonCallback(this->_win, nullptr);
+    }
+    else if ((! this->_mouseButtonEnabled) && enable) {
+        // enable the callback
+        this->_mouseButtonEnabled = true;
+        glfwSetMouseButtonCallback(this->_win, mouseButtonCB);
+    }
+
+}
+
+void Window::enableScrollEvent (bool enable)
+{
+    if (this->_scrollEnabled && (! enable)) {
+        // disable the callback
+        this->_scrollEnabled = false;
+        glfwSetScrollCallback(this->_win, nullptr);
+    }
+    else if ((! this->_scrollEnabled) && enable) {
+        // enable the callback
+        this->_scrollEnabled = true;
+        glfwSetScrollCallback(this->_win, scrollCB);
+    }
+
 }
 
 Window::SwapChainDetails Window::_getSwapChainDetails ()
