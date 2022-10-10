@@ -106,7 +106,8 @@ protected:
 
     //! \brief A helper function to create the logical device during initialization
     //!
-    //! This function initializes the `_device`, `_qIdxs`, and `_queues` instance variables.
+    //! This function initializes the `_device`, `_qIdxs`, and `_queues`
+    //! instance variables.
     void _createLogicalDevice ();
 };
 

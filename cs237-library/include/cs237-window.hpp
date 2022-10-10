@@ -179,9 +179,13 @@ protected:
     void _createSwapChain();
 
     //! the graphics queue-family index
+    //!
+    //! This is a wrapper to allow subclasses access to this information
     uint32_t _graphicsQIdx () const { return this->_app->_qIdxs.graphics; }
 
     //! the presentation queue
+    //!
+    //! This is a wrapper to allow subclasses access to this information
     uint32_t _presentationQIdx () const { return this->_app->_qIdxs.present; }
 
 };

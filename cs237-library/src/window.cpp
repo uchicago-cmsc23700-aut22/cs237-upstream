@@ -133,6 +133,7 @@ void Window::iconify (bool iconified)
     this->_isVis = !iconified;
 }
 
+/* default event handlers just ignore the events */
 void Window::key (int key, int scancode, int action, int mods) { }
 void Window::cursorPos (double xpos, double ypos) { }
 void Window::cursorEnter (bool entered) { }
