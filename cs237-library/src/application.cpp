@@ -62,6 +62,9 @@ Application::Application (std::vector<const char *> &args, std::string const &na
 
 Application::~Application ()
 {
+    // destroy the logical device
+    vkDestroyDevice(this->_device, nullptr);
+
     // delete the instance
     vkDestroyInstance(this->_instance, nullptr);
 
