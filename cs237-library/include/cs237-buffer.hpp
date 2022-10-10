@@ -30,7 +30,7 @@ public:
             this->_app->_device,
             this->_buf,
             memObj->_mem,
-            memObj->_sz);
+            0);
         if (sts != VK_SUCCESS) {
             ERROR ("unable to bind buffer to memory object.");
         }

@@ -17,7 +17,9 @@ MemoryObj::MemoryObj (Application *app, VkMemoryRequirements const &reqs)
 {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = reqs.size;
+    // the allocated memory size must be a multiple of the alignment
+    allocInfo.allocationSize =
+        (reqs.size + reqs.alignment - 1) & ~(reqs.alignment - 1);
     allocInfo.memoryTypeIndex = app->_findMemory(
         reqs.memoryTypeBits,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);

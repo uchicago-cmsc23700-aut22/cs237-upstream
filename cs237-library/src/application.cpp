@@ -21,8 +21,13 @@ static std::vector<const char *> requiredExtensions (bool debug);
 static int graphicsQueueIndex (VkPhysicalDevice dev);
 
 const std::vector<const char*> kDeviceExts = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
-        };
+        "VK_KHR_portability_subset",
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+const std::vector<const char *> kValidationLayers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
 
 
 /******************** class Application methods ********************/
@@ -77,10 +82,6 @@ void Application::_createInstance ()
     appInfo.engineVersion = 0;
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
-    // in debug mode, we add a validation layer
-    if (this->_debug) {
-    }
-
     // figure out what extensions we are going to need
     auto extensions = requiredExtensions(this->_debug);
 
@@ -90,9 +91,15 @@ void Application::_createInstance ()
     createInfo.pNext = nullptr;
     createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     createInfo.pApplicationInfo = &appInfo;
-/* FIXME: support for validation layer */
-    createInfo.enabledLayerCount = 0;
-    createInfo.ppEnabledLayerNames = nullptr;
+    if (this->_debug) {
+        // in debug mode, we add validation layer(s)
+        createInfo.enabledLayerCount = kValidationLayers.size();
+        createInfo.ppEnabledLayerNames = kValidationLayers.data();
+    }
+    else {
+        createInfo.enabledLayerCount = 0;
+        createInfo.ppEnabledLayerNames = nullptr;
+    }
     createInfo.enabledExtensionCount = extensions.size();
     createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -210,12 +217,12 @@ void Application::_createLogicalDevice ()
     createInfo.pQueueCreateInfos = qCreateInfos.data();
 
     // include validation layer if in debug mode
-//     if (this->_debug) {
-//         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-//         createInfo.ppEnabledLayerNames = validationLayers.data();
-//     } else {
-//         createInfo.enabledLayerCount = 0;
-//     }
+    if (this->_debug) {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(kValidationLayers.size());
+        createInfo.ppEnabledLayerNames = kValidationLayers.data();
+    } else {
+        createInfo.enabledLayerCount = 0;
+    }
 
     // set up the enabled extensions to include swap chains
     createInfo.enabledExtensionCount = static_cast<uint32_t>(kDeviceExts.size());
@@ -261,8 +268,9 @@ std::vector<VkLayerProperties> Application::supportedLayers ()
 /******************** local utility functions ********************/
 
 // A helper function for determining the extensions that are required
-// These include the extensions required by GLFW and the extensions
-// required for debugging support when `debug` is true.
+// when creating an instance. These include the extensions required
+// by GLFW and the extensions required for debugging support when
+// `debug` is true.
 //
 static std::vector<const char *> requiredExtensions (bool debug)
 {
@@ -278,6 +286,7 @@ static std::vector<const char *> requiredExtensions (bool debug)
     std::vector<const char *> reqExts (glfwReqExts, glfwReqExts+extCount);
 
     reqExts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    reqExts.push_back("VK_KHR_get_physical_device_properties2");
 
     // add debug extensions
     if (debug) {

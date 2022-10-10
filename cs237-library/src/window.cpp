@@ -331,7 +331,6 @@ void Window::_createSwapChain ()
     // create a view per swap-chain image
     this->_swap.views.resize(this->_swap.images.size());
     for (int i = 0; i < this->_swap.images.size(); ++i) {
-        VkImageViewCreateInfo viewInfo{};
         viewInfo.image = this->_swap.images[i];
         if (vkCreateImageView(dev, &viewInfo, nullptr, &this->_swap.views[i])
             != VK_SUCCESS)
