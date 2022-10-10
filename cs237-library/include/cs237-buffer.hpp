@@ -22,6 +22,8 @@ namespace cs237 {
 //! A base class for buffer objects of all kinds
 class Buffer {
 public:
+    VkBuffer vkBuffer () const { return this->_buf; }
+
     void bindMemory (MemoryObj *memObj)
     {
         auto sts = vkBindBufferMemory(
@@ -74,6 +76,7 @@ protected:
 
 //! Buffer class for vertex data
 class VertexBuffer : public Buffer {
+public:
 
     VertexBuffer (Application *app, size_t sz)
       : Buffer (app, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sz)
@@ -82,6 +85,7 @@ class VertexBuffer : public Buffer {
 
 //! Buffer class for index data
 class IndexBuffer : public Buffer {
+public:
 
     IndexBuffer (Application *app, size_t sz)
       : Buffer (app, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sz)

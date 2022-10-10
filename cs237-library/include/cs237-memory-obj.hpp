@@ -28,7 +28,7 @@ public:
     //! \param offset   offset from the beginning of the memory object to copy
     //!                 the data to
     //! \param sz       size in bytes of the data to copy
-    void copyTo (void *src, size_t offset, size_t sz)
+    void copyTo (const void *src, size_t offset, size_t sz)
     {
         assert (offset + sz <= this->_sz);
 
@@ -50,7 +50,7 @@ public:
 
     //! copy data to the device memory object
     //! \param src      address of data to copy
-    void copyTo (void *src) { this->copyTo(src, 0, this->_sz); }
+    void copyTo (const void *src) { this->copyTo(src, 0, this->_sz); }
 
     size_t size () const { return this->_sz; }
 

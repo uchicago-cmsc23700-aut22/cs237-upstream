@@ -10,6 +10,7 @@
 
 set(SRCS
   application.cpp
+  memory-obj.cpp
   window.cpp
   shader.cpp)
 
