@@ -328,7 +328,7 @@ void Window::_createSwapChain ()
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    // create a view per swap-chain image
+    // create an image view per swap-chain image
     this->_swap.views.resize(this->_swap.images.size());
     for (int i = 0; i < this->_swap.images.size(); ++i) {
         viewInfo.image = this->_swap.images[i];
