@@ -153,6 +153,48 @@ protected:
         void cleanup ();
     };
 
+    //! a container for a frame's synchronization objects
+    struct SyncObjs {
+        Window *win;                    //!< the owning window
+        VkSemaphore imageAvailable;     //!< semaphore for signaling when image is available
+        VkSemaphore renderFinished;     //!< semaphore for signaling when render is finished
+        VkFence inFlight;               //!< fence for
+
+        //! create a SyncObjs container
+        explicit SyncObjs (Window *w)
+          : win(w),
+            imageAvailable(VK_NULL_HANDLE),
+            renderFinished(VK_NULL_HANDLE),
+            inFlight(VK_NULL_HANDLE)
+        { }
+        SyncObjs (SyncObjs &) = delete;
+        SyncObjs (SyncObjs const &) = delete;
+
+        //! destroy the objects
+        ~SyncObjs ();
+
+        //! allocate the synchronization objects
+        void allocate ();
+
+        //! \brief acquire the next image from the window's swap chain.
+        //! \param[out] imageIndex the variable to store the next image's index
+        //! \return the return status of acquiring the image
+        VkResult acquireNextImage (uint32_t &imageIndex);
+
+        //! reset the in-flight fence of this frame
+        void reset ();
+
+        //! submit a command buffer to a queue using this frame's synchronization objects
+        //! \param q        the queue to submit the commands to
+        //! \param cmdBuf   the command buffer to submit
+        void submitCommands (VkQueue q, VkCommandBuffer const &cmdBuf);
+
+        //! \brief present the frame
+        //! \param q  the presentation queue
+        //! \return the return status of presenting the image
+        VkResult present (VkQueue q, const uint32_t *imageIndices);
+    };
+
     Application *_app;                  //!< the owning application
     GLFWwindow *_win;                   //!< the underlying window
     int _wid, _ht;	                //!< window dimensions
@@ -187,6 +229,11 @@ protected:
     //!
     //! This is a wrapper to allow subclasses access to this information
     uint32_t _presentationQIdx () const { return this->_app->_qIdxs.present; }
+
+    //! \brief add a viewport command to the command buffer; this also sets the
+    //!        scissor rectangle to the whole window.
+    //! \param cmdBuf   the command buffer
+    void _setViewportCmd (VkCommandBuffer cmdBuf);
 
 };
 

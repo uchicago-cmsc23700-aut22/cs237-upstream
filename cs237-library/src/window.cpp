@@ -341,6 +341,25 @@ void Window::_createSwapChain ()
 
 }
 
+void Window::_setViewportCmd (VkCommandBuffer cmdBuf)
+{
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = float(this->_swap.extent.width);
+    viewport.height = float(this->_swap.extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = this->_swap.extent;
+    vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
+}
+
+
 /******************** struct Window::SwapChainDetails methods ********************/
 
 // choose the surface format for the buffers
@@ -439,6 +458,117 @@ void Window::SwapChain::cleanup ()
      */
 
     vkDestroySwapchainKHR(this->device, this->chain, nullptr);
+}
+
+/******************** struct Window::SyncObjs methods ********************/
+
+void Window::SyncObjs::allocate ()
+{
+    assert (this->imageAvailable == VK_NULL_HANDLE);
+
+    // allocate synchronization objects
+    VkSemaphoreCreateInfo semInfo{};
+    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    auto device = this->win->device();
+    if ((vkCreateSemaphore(device, &semInfo, nullptr, &this->imageAvailable) != VK_SUCCESS)
+    ||  (vkCreateSemaphore(device, &semInfo, nullptr, &this->renderFinished) != VK_SUCCESS)
+    ||  (vkCreateFence(device, &fenceInfo, nullptr, &this->inFlight) != VK_SUCCESS))
+    {
+        ERROR("unable to create synchronization objects");
+    }
+}
+
+Window::SyncObjs::~SyncObjs ()
+{
+    assert (this->imageAvailable != VK_NULL_HANDLE);
+
+    auto device = this->win->device();
+
+    // delete synchronization objects
+    vkDestroyFence(device, this->inFlight, nullptr);
+    vkDestroySemaphore(device, this->imageAvailable, nullptr);
+    vkDestroySemaphore(device, this->renderFinished, nullptr);
+
+}
+
+VkResult Window::SyncObjs::acquireNextImage (uint32_t &imageIndex)
+{
+    assert (this->inFlight != VK_NULL_HANDLE);
+
+    vkWaitForFences(this->win->device(), 1, &this->inFlight, VK_TRUE, UINT64_MAX);
+
+    auto sts = vkAcquireNextImageKHR(
+        this->win->device(),
+        this->win->_swap.chain,
+        UINT64_MAX,
+        this->imageAvailable,
+        VK_NULL_HANDLE,
+        &imageIndex);
+
+    return sts;
+}
+
+//! reset the in-flight fence of this frame
+void Window::SyncObjs::reset ()
+{
+    assert (this->inFlight != VK_NULL_HANDLE);
+
+    vkResetFences(this->win->device(), 1, &this->inFlight);
+}
+
+//! submit a command buffer to a queue using this frame's synchronization objects
+//! \param q        the queue to submit the commands to
+//! \param cmdBuf   the command buffer to submit
+void Window::SyncObjs::submitCommands (VkQueue q, VkCommandBuffer const &cmdBuf)
+{
+    assert (this->imageAvailable != VK_NULL_HANDLE);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSems[1] = { this->imageAvailable };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSems;
+    VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuf;
+
+    VkSemaphore signalSems[1] = { this->renderFinished };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSems;
+
+    if (vkQueueSubmit(q, 1, &submitInfo, this->inFlight) != VK_SUCCESS) {
+        ERROR("unable to submit draw command buffer!");
+    }
+}
+
+//! \brief present the frame
+//! \param q  the presentation queue
+//! \return the return status of presenting the image
+VkResult Window::SyncObjs::present (VkQueue q, const uint32_t *imageIndices)
+{
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    VkSemaphore waitSems[1] = { this->renderFinished };
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = waitSems;
+
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &this->win->_swap.chain;
+
+    presentInfo.pImageIndices = imageIndices;
+
+    auto sts = vkQueuePresentKHR(q, &presentInfo);
+
+    return sts;
 }
 
 } // namespace cs237
