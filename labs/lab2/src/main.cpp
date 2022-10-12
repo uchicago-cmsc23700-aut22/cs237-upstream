@@ -27,7 +27,7 @@ const std::string kShaderDir = CS237_BINARY_DIR "/labs/lab2/shaders/";
 // view parameters; these are constants for now.
 static const float kNearZ = 0.2f;       //!< distance to near plane
 static const float kFarZ = 50.0f;       //!< distance to far plane
-static const float kFOV = 120.0f;        //!< field of view angle in degrees
+static const float kFOV = 100.0f;       //!< field of view angle in degrees
 
 // layout of the unform buffer for the vertex shader; we use the `alignas`
 // annotations to ensure that the values are correctly aligned.  See
@@ -163,6 +163,11 @@ private:
 Lab2Window::Lab2Window (Lab2 *app)
     : cs237::Window (app, cs237::CreateWindowInfo(800, 600)), _syncObjs(this)
 {
+    // initialize the camera
+    this->_camPos = glm::vec3(0.0f, 0.0f, 5.0f);
+    this->_camAt = glm::vec3(0.0f, 0.0f, 0.0f);
+    this->_camUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
     this->_initBuffers();
 
     // create the descriptor set for the uniform buffer
