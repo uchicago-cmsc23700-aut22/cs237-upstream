@@ -11,8 +11,10 @@
 #ifndef _CS237_MEMORY_OBJ_HPP_
 #define _CS237_MEMORY_OBJ_HPP_
 
-#include "vulkan/vulkan_core.h"
-#include <cstring>
+#ifndef _CS237_HPP_
+#error "cs237-memory.hpp should not be included directly"
+#endif
+
 namespace cs237 {
 
 //! wrapper around Vulkan memory objects

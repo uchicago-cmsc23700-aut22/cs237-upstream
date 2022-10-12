@@ -25,5 +25,4 @@ add_executable(${TARGET} ${SRCS})
 target_link_libraries(${TARGET} ${GLFW_LIBRARY})
 target_link_libraries(${TARGET} ${VULKAN_LIBRARY})
 target_link_libraries(${TARGET} cs237)
-add_dependencies(${TARGET} Shaders)
-
+add_dependencies(${TARGET} lab2-shaders)

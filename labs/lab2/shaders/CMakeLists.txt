@@ -27,5 +27,5 @@ foreach(SHADER_SRC ${SRCS})
 endforeach(SHADER_SRC)
 
 add_custom_target(
-  Shaders
+  lab2-shaders
   DEPENDS ${SPIRV_BINARY_FILES})

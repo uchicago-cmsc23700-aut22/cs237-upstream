@@ -13,7 +13,6 @@
 #ifndef _CS237_WINDOW_HPP_
 #define _CS237_WINDOW_HPP_
 
-#include "vulkan/vulkan_core.h"
 #ifndef _CS237_HPP_
 #error "cs237-window.hpp should not be included directly"
 #endif

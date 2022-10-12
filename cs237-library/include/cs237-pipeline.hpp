@@ -3,7 +3,7 @@
  * Support code for CMSC 23700 Autumn 2022.
  *
  * This file contains a number of helper functions for
- * defining a graphcis pipeline.
+ * defining a graphics pipeline.
  *
  * \author John Reppy
  */

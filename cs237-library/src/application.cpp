@@ -110,11 +110,32 @@ void Application::_createInstance ()
         ERROR("unable to create a vulkan instance");
     }
 
-    // pick the physical device
-    this->_selectDevice ();
+    // pick the physical device; we require fillModeNonSolid to support
+    // wireframes.
+    VkPhysicalDeviceFeatures reqs{};
+    reqs.fillModeNonSolid = VK_TRUE;
+    this->_selectDevice (&reqs);
 
     // create the logical device and get the queues
     this->_createLogicalDevice ();
+}
+
+// check that a device meets the requested features
+//
+static bool hasFeatures (VkPhysicalDevice gpu, VkPhysicalDeviceFeatures *reqFeatures)
+{
+    if (reqFeatures == nullptr) {
+        return true;
+    }
+    VkPhysicalDeviceFeatures availFeatures;
+    vkGetPhysicalDeviceFeatures (gpu, &availFeatures);
+
+    if (reqFeatures->fillModeNonSolid == availFeatures.fillModeNonSolid) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 // A helper function to pick the physical device when there is more than one.
@@ -142,7 +163,7 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
 
     // we first look for a discrete GPU
     for (auto & dev : devices) {
-        if (this->_getQIndices(dev)) {
+        if (hasFeatures(dev, reqFeatures) && this->_getQIndices(dev)) {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(dev, &props);
             if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
@@ -153,7 +174,7 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
     }
     // no discrete GPU, so look for an integrated GPU
     for (auto & dev : devices) {
-        if (this->_getQIndices(dev)) {
+        if (hasFeatures(dev, reqFeatures) && this->_getQIndices(dev)) {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(dev, &props);
             if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
@@ -164,7 +185,7 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
     }
     // check for any device that supports graphics and presentation
     for (auto & dev : devices) {
-        if (this->_getQIndices(dev)) {
+        if (hasFeatures(dev, reqFeatures) && this->_getQIndices(dev)) {
             this->_gpu = dev;
             return;
         }
@@ -233,6 +254,7 @@ void Application::_createLogicalDevice ()
 
     // for now, we are not enabling any extra features
     VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.fillModeNonSolid = VK_TRUE;
     createInfo.pEnabledFeatures = &deviceFeatures;
 
     // create the logical device

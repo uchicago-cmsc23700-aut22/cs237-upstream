@@ -18,7 +18,8 @@
 #include "cs237.hpp"
 
 #ifdef CS237_BINARY_DIR
-const std::string kShaderDir = CS237_BINARY_DIR "/labs/lab1/shaders/";
+//!< the absolute path to the directory containing the compiled shaders
+const std::string kShaderDir = CS237_BINARY_DIR "/labs/lab2/shaders/";
 #else
 # error CS237_BINARY_DIR not defined
 #endif
@@ -56,7 +57,7 @@ struct Vertex {
 
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
     {
-        std::vector<VkVertexInputAttributeDescription> attrs(2);
+        std::vector<VkVertexInputAttributeDescription> attrs(1);
 
         // pos
         attrs[0].binding = 0;
@@ -70,14 +71,14 @@ struct Vertex {
 
 //! the corners of a 2x2x2 cube at the origin
 static const std::vector<Vertex> cubeVertices = {
-        { -1.0f, -1.0f,  1.0f }, // 0
-        { -1.0f,  1.0f,  1.0f }, // 1
-        {  1.0f,  1.0f,  1.0f }, // 2
-        {  1.0f, -1.0f,  1.0f }, // 3
-        { -1.0f, -1.0f, -1.0f }, // 4
-        { -1.0f,  1.0f, -1.0f }, // 5
-        {  1.0f,  1.0f, -1.0f }, // 6
-        {  1.0f, -1.0f, -1.0f }  // 7
+        {{ -1.0f, -1.0f,  1.0f }}, // 0
+        {{ -1.0f,  1.0f,  1.0f }}, // 1
+        {{  1.0f,  1.0f,  1.0f }}, // 2
+        {{  1.0f, -1.0f,  1.0f }}, // 3
+        {{ -1.0f, -1.0f, -1.0f }}, // 4
+        {{ -1.0f,  1.0f, -1.0f }}, // 5
+        {{  1.0f,  1.0f, -1.0f }}, // 6
+        {{  1.0f, -1.0f, -1.0f }}  // 7
     };
 
 //! the vertex indices of the cube edges; two vertices per edge.
@@ -129,8 +130,11 @@ private:
     cs237::MemoryObj *_vertBufferMemory;        //!< memory object for `_vertBuffer`
     cs237::IndexBuffer *_idxBuffer;             //!< index buffer for cube indices
     cs237::MemoryObj *_idxBufferMemory;         //!< memory object for `_idxBuffer`
-    cs237::UniformBuffer *_ubo;                  //!< uniform buffer for vertex shader
+    cs237::UniformBuffer *_ubo;                 //!< uniform buffer for vertex shader
     cs237::MemoryObj *_uboMemory;               //!< memory object for `_vshUBO`
+    VkDescriptorSetLayout _descSetLayout;       //!< descriptor-set layout for uniform buffer
+    VkDescriptorPool _descPool;                 //!< descriptor-set pool
+    VkDescriptorSet _descSet;                   //!< descriptor set for uniform buffer
     SyncObjs _syncObjs;
   // Camera state
     glm::vec3 _camPos;                          //!< camera position in world space
@@ -141,6 +145,8 @@ private:
     //! matrices that are computed from the current camera state.
     void _initUniforms ();
 
+    //! initialize the UBO descriptors
+    void _initDescriptors ();
     //! initialize the `_renderPass` field
     void _initRenderPass ();
     //! initialize the `_pipelineLayout` and `_graphicsPipeline` fields
@@ -157,6 +163,11 @@ private:
 Lab2Window::Lab2Window (Lab2 *app)
     : cs237::Window (app, cs237::CreateWindowInfo(800, 600)), _syncObjs(this)
 {
+    this->_initBuffers();
+
+    // create the descriptor set for the uniform buffer
+    this->_initDescriptors();
+
     this->_initRenderPass ();
     this->_initPipeline ();
 
@@ -189,34 +200,106 @@ Lab2Window::Lab2Window (Lab2 *app)
     // allocate synchronization objects
     this->_syncObjs.allocate();
 
-    this->_initBuffers();
-
     // enable handling of keyboard events
     this->enableKeyEvent (true);
 }
 
 Lab2Window::~Lab2Window ()
 {
+    auto device = this->device();
+
     /* delete the command buffer */
-    vkFreeCommandBuffers(this->device(), this->_cmdPool, 1, &this->_cmdBuffer);
+    vkFreeCommandBuffers(device, this->_cmdPool, 1, &this->_cmdBuffer);
 
     /* delete the command pool */
-    vkDestroyCommandPool(this->device(), this->_cmdPool, nullptr);
+    vkDestroyCommandPool(device, this->_cmdPool, nullptr);
 
     /* delete the framebuffers */
     for (auto fb : this->_framebuffers) {
-        vkDestroyFramebuffer(this->device(), fb, nullptr);
+        vkDestroyFramebuffer(device, fb, nullptr);
     }
 
-    vkDestroyPipeline(this->device(), this->_graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(this->device(), this->_pipelineLayout, nullptr);
-    vkDestroyRenderPass(this->device(), this->_renderPass, nullptr);
+    vkDestroyPipeline(device, this->_graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device, this->_pipelineLayout, nullptr);
+    vkDestroyRenderPass(device, this->_renderPass, nullptr);
+
+    vkDestroyDescriptorPool(device, this->_descPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, this->_descSetLayout, nullptr);
+
     delete this->_uboMemory;
     delete this->_ubo;
     delete this->_idxBufferMemory;
     delete this->_idxBuffer;
     delete this->_vertBufferMemory;
     delete this->_vertBuffer;
+}
+
+void Lab2Window::_initDescriptors ()
+{
+    auto device = this->device();
+
+    // create the descriptor pool
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = 1;
+
+    auto sts = vkCreateDescriptorPool(device, &poolInfo, nullptr, &this->_descPool);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create descriptor pool!");
+    }
+
+    // create the descriptor set layout
+    VkDescriptorSetLayoutBinding layoutBinding{};
+    layoutBinding.binding = 0;
+    layoutBinding.descriptorCount = 1;
+    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding.pImmutableSamplers = nullptr;
+    layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &layoutBinding;
+
+    sts = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &this->_descSetLayout);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create descriptor set layout!");
+    }
+
+    // create the descriptor set
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = this->_descPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &this->_descSetLayout;
+
+    sts = vkAllocateDescriptorSets(device, &allocInfo, &this->_descSet);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to allocate descriptor sets!");
+    }
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = this->_ubo->vkBuffer();
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(UBO);
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = this->_descSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+
 }
 
 void Lab2Window::_initRenderPass ()
@@ -273,7 +356,7 @@ void Lab2Window::_initPipeline ()
     std::vector<cs237::ShaderKind> stages{
             cs237::ShaderKind::Vertex, cs237::ShaderKind::Fragment
         };
-    auto shaders = new cs237::Shaders(this->device(), kShaderDir + "no-light", stages);
+    auto shaders = new cs237::Shaders(this->device(), kShaderDir + "shader", stages);
 
     // vertex input info
     auto vertexInfo = cs237::vertexInputInfo (
@@ -335,7 +418,8 @@ void Lab2Window::_initPipeline ()
 
     VkPipelineLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutInfo.setLayoutCount = 0;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &this->_descSetLayout;
     layoutInfo.pushConstantRangeCount = 0;
 
     auto sts = vkCreatePipelineLayout(
@@ -425,6 +509,8 @@ void Lab2Window::_recordCommandBuffer (uint32_t imageIdx)
 
     /** HINT: bind the index buffer */
 
+    /** HINT: bind the descriptor set */
+
     /** HINT: change the following draw command */
     vkCmdDraw(this->_cmdBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
     /*** END COMMANDS ***/
@@ -469,7 +555,7 @@ void Lab2Window::key (int key, int scancode, int action, int mods)
 
         switch (key) {
             case GLFW_KEY_Q:  // 'q' or 'Q' ==> quit
-                glfwSetWindowShouldClose (win, true);
+                glfwSetWindowShouldClose (this->_win, true);
                 break;
 
             case GLFW_KEY_UP:
