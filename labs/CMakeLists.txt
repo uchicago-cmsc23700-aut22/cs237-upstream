@@ -9,3 +9,4 @@
 #
 
 add_subdirectory(lab1 EXCLUDE_FROM_ALL)
+add_subdirectory(lab2 EXCLUDE_FROM_ALL)
