@@ -17,6 +17,8 @@
 #error "cs237-window.hpp should not be included directly"
 #endif
 
+#include <optional>
+
 namespace cs237 {
 
 //! structure containing parameters for the `creteWindow` method
@@ -25,12 +27,18 @@ struct CreateWindowInfo {
     int wid;            //!< the window width
     int ht;             //!< the window height
     std::string title;  //!< window title
-    bool resizable;
+    bool resizable;     //!< should the window support resizing
+    bool depth;         //!< do we need depth-buffer support?
+    bool stencil;       //!< do we need stencil-buffer support?
 
+    CreateWindowInfo (int w, int h, std::string const &t, bool r, bool d, bool s)
+        : wid(w), ht(h), title(t), resizable(r), depth(d), stencil(s)
+    { }
     CreateWindowInfo (int w, int h)
-        : wid(w), ht(h), title(""), resizable(false)
+        : wid(w), ht(h), title(""), resizable(false), depth(true), stencil(false)
     { }
 
+    bool needsDepthBuf () const { return this->depth || this->stencil; }
 };
 
 //! abstract base class for simple GLFW windows used to view buffers, etc.
@@ -123,8 +131,15 @@ protected:
         //! \brief choose a presentation mode from the available modes; we prefer
         //!        "mailbox" (aka triple buffering)
         VkPresentModeKHR choosePresentMode ();
-        //!
+        //! \brief get the extent of the window subject to the limits of the Vulkan device
         VkExtent2D chooseExtent (GLFWwindow *win);
+    };
+
+    struct DepthStencilBuffer {
+        VkFormat format;                //!< the depth/image-buffer format
+        VkImage image;                  //!< depth/image-buffer image
+        VkDeviceMemory imageMem;        //!< device memory for depth/image-buffer
+        VkImageView view;               //!< image view for depth/image-buffer
     };
 
     //! the collected information about the swap-chain for a window
@@ -138,9 +153,11 @@ protected:
         // swap chain.
         std::vector<VkImage> images;            //!< images for the swap buffers
         std::vector<VkImageView> views;         //!< image views for the swap buffers
-/* TODO: extend with support for other image attachments, such as the depth buffer */
+        std::optional<DepthStencilBuffer> dsBuf; //!< optional depth/stencil-buffer
 
-        SwapChain (VkDevice dev) : device(dev), numAttachments(1) { }
+        SwapChain (VkDevice dev)
+          : device(dev), dsBuf(std::nullopt)
+        { }
 
         //! return the number of buffers in the swap chain
         int size () const { return this->images.size(); }
@@ -217,7 +234,17 @@ protected:
 
     //! \brief Create the swap chain for this window; this initialized the _swap
     //!        instance variable.
-    void _createSwapChain();
+    //! \param depth    set to true if requesting depth-buffer support
+    //! \param stencil  set to true if requesting stencil-buffer support
+    void _createSwapChain (bool depth, bool stencil);
+
+    //! \brief initialize the attachment descriptors and references for the color and
+    //!        optional depth/stencil-buffer
+    //! \param[out] descs  vector that will contain the attachment descriptors
+    //! \param[out] refs   vector that will contain the attachment references
+    void _initAttachments (
+        std::vector<VkAttachmentDescription> &descs,
+        std::vector<VkAttachmentReference> &refs);
 
     //! the graphics queue-family index
     //!

@@ -38,6 +38,9 @@ public:
     //! main function for running the application
     virtual void run () = 0;
 
+    //! \brief return the application name
+    std::string name () const { return this->_name; }
+
     //! \brief is the program in debug mode?
     bool debug () const { return this->_debug; }
     //! \brief is the program in verbose mode?
@@ -95,6 +98,28 @@ protected:
     //!         required properties.  If no such memory exists, then -1 is returned.
     int32_t _findMemory (uint32_t reqTypeBits, VkMemoryPropertyFlags reqProps) const;
 
+    //! \brief A helper function to identify the best image format supported by the
+    //!        device from an ordered list of candidate formats
+    //! \param candidates   list of candidates in order of preference
+    //! \param tiling       how pixels are to be tiled in the image (linear vs optimal)
+    //! \param features     required features for the format
+    //! \return the first format in the list of candidates that has the required features
+    //!         for the specified tiling.  VK_FORMAT_UNDEFINED is returned if there is
+    //!         no valid candidate
+    VkFormat _findBestFormat (
+        std::vector<VkFormat> candidates,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features);
+
+    //! \brief A helper function to identify the best depth/stencil-buffer attachment
+    //!        format for the device
+    //! \param depth    set to true if requesting depth-buffer support
+    //! \param stencil  set to true if requesting stencil-buffer support
+    //! \return the format that has the requested buffer support and the best precision.
+    //!         Returns VK_FORMAT_UNDEFINED is `depth` and `stencil` are both false or
+    //!         if there s no depth-buffer support
+    VkFormat _depthStencilBufferFormat (bool depth, bool stencil);
+
     //! \brief A helper function to identify the queue-family indices for the
     //!        physical device that we are using.
     //! \return `true` if the device supports all of the required queue types and `false`
@@ -109,6 +134,29 @@ protected:
     //! This function initializes the `_device`, `_qIdxs`, and `_queues`
     //! instance variables.
     void _createLogicalDevice ();
+
+    //! \brief A helper function for creating a Vulkan image that can be used for
+    //!        textures or depth buffers
+    //! \param wid      the image width
+    //! \param ht       the image height
+    //! \param format   the pixel format for the image
+    //! \param tiling   the tiling method for the pixels (device optimal vs linear)
+    //! \param usage    flags specifying the usage of the image
+    //! \return the created image
+    VkImage _createImage (
+        uint32_t wid,
+        uint32_t ht,
+        VkFormat format,
+        VkImageTiling tiling,
+        VkImageUsageFlags usage);
+
+    //! \brief A helper function for allocating and binding device memory for an image
+    //! \param img    the image to allocate memory for
+    //! \param props  requred memory properties
+    //! \return the device memory that has been bound to the image
+    VkDeviceMemory _allocImageMemory (VkImage img, VkMemoryPropertyFlags props);
+
+    VkImageView _createImageView (VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 };
 
 } // namespace cs237

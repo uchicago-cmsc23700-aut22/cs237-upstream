@@ -93,7 +93,9 @@ Window::Window (Application *app, CreateWindowInfo const &info)
 
     // set up window-system callbacks
     glfwSetWindowRefreshCallback (window, refreshCB);
-    glfwSetWindowSizeCallback (window, reshapeCB);
+    if (info.resizable) {
+        glfwSetWindowSizeCallback (window, reshapeCB);
+    }
     glfwSetWindowIconifyCallback (window, iconifyCB);
 
     this->_win = window;
@@ -107,7 +109,7 @@ Window::Window (Application *app, CreateWindowInfo const &info)
     }
 
     // set up the swap chain for the surface
-    this->_createSwapChain ();
+    this->_createSwapChain (info.depth, info.stencil);
 
 }
 
@@ -250,8 +252,15 @@ Window::SwapChainDetails Window::_getSwapChainDetails ()
 
 }
 
-void Window::_createSwapChain ()
+void Window::_createSwapChain (bool depth, bool stencil)
 {
+    // determine the required depth/stencil-buffer format
+    VkFormat dsFormat = this->_app->_depthStencilBufferFormat(depth, stencil);
+    if ((dsFormat == VK_FORMAT_UNDEFINED) && (depth || stencil)) {
+        ERROR("depth/stencil buffer requested but not supported by device");
+    }
+    this->_swap.numAttachments = (dsFormat == VK_FORMAT_UNDEFINED) ? 1 : 2;
+
     SwapChainDetails swapChainSupport = this->_getSwapChainDetails ();
 
     // choose the best aspects of the swap chain
@@ -297,8 +306,8 @@ void Window::_createSwapChain ()
     swapInfo.oldSwapchain = VK_NULL_HANDLE;
 
     VkDevice dev = this->device();
-    if (vkCreateSwapchainKHR(dev, &swapInfo, nullptr, &this->_swap.chain) != VK_SUCCESS)
-    {
+    auto sts = vkCreateSwapchainKHR(dev, &swapInfo, nullptr, &this->_swap.chain);
+    if (sts != VK_SUCCESS) {
         ERROR("unable to create swap chain!");
     }
 
@@ -312,33 +321,68 @@ void Window::_createSwapChain ()
     this->_swap.imageFormat = surfaceFormat.format;
     this->_swap.extent = extent;
 
-    // create the image views
-    // first we initialize the invariant parts of the create info structure
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = this->_swap.imageFormat;
-    viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
     // create an image view per swap-chain image
     this->_swap.views.resize(this->_swap.images.size());
     for (int i = 0; i < this->_swap.images.size(); ++i) {
-        viewInfo.image = this->_swap.images[i];
-        if (vkCreateImageView(dev, &viewInfo, nullptr, &this->_swap.views[i])
-            != VK_SUCCESS)
-        {
-            ERROR("unable to create image views!");
-        }
+        this->_swap.views[i] = this->_app->_createImageView(
+            this->_swap.images[i],
+            this->_swap.imageFormat,
+            VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
+    if (dsFormat != VK_FORMAT_UNDEFINED) {
+        DepthStencilBuffer dsBuf;
+        dsBuf.format = dsFormat;
+        dsBuf.image = this->_app->_createImage(
+            extent.width, extent.height,
+            dsFormat,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        dsBuf.imageMem = this->_app->_allocImageMemory(
+            dsBuf.image,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        dsBuf.view = this->_app->_createImageView (
+            dsBuf.image,
+            dsFormat,
+            VK_IMAGE_ASPECT_DEPTH_BIT);
+        this->_swap.dsBuf = dsBuf;
+    }
+}
+
+void Window::_initAttachments (
+    std::vector<VkAttachmentDescription> &descs,
+    std::vector<VkAttachmentReference> &refs)
+{
+    descs.resize(this->_swap.numAttachments);
+    refs.resize(this->_swap.numAttachments);
+
+    // the output color buffer
+    descs[0].format = this->_swap.imageFormat;
+    descs[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    descs[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    descs[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    descs[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    descs[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    descs[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    descs[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    refs[0].attachment = 0;
+    refs[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    if (this->_swap.dsBuf.has_value()) {
+        descs[1].format = this->_swap.dsBuf->format;
+        descs[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        descs[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        descs[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+/* FIXME: if we need stencil support, then the following is incorrect! */
+        descs[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        descs[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        descs[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        descs[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        refs[1].attachment = 1;
+        refs[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
 }
 
 void Window::_setViewportCmd (VkCommandBuffer cmdBuf)
@@ -426,6 +470,11 @@ std::vector<VkFramebuffer> Window::SwapChain::framebuffers (VkRenderPass renderP
     // a depth buffer
     VkImageView attachments[this->numAttachments];
 
+    if (this->dsBuf.has_value()) {
+        // include the depth buffer
+        attachments[1] = this->dsBuf->view;
+    }
+
     // initialize the invariant parts of the create info structure
     VkFramebufferCreateInfo fbInfo{};
     fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -456,6 +505,13 @@ void Window::SwapChain::cleanup ()
     /* note that the images are owned by the swap chain object, so we do not have
      * to destroy them.
      */
+
+    // cleanup the depth buffer (if present)
+    if (this->dsBuf.has_value()) {
+        vkDestroyImageView(this->device, this->dsBuf->view, nullptr);
+        vkDestroyImage(this->device, this->dsBuf->image, nullptr);
+        vkFreeMemory(this->device, this->dsBuf->imageMem, nullptr);
+    }
 
     vkDestroySwapchainKHR(this->device, this->chain, nullptr);
 }

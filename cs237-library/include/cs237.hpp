@@ -23,6 +23,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 /* The GLFW and Vulkan library */
 #define GLFW_INCLUDE_VULKAN
@@ -52,12 +54,13 @@ inline void ReportError (const char *file, int line, std::string const &msg)
 /* CS23700 support files */
 #include "cs237-types.hpp"
 
-#include "json.hpp"
 #include "cs237-shader.hpp"
 #include "cs237-pipeline.hpp"
 #include "cs237-application.hpp"
 #include "cs237-window.hpp"
 #include "cs237-memory-obj.hpp"
 #include "cs237-buffer.hpp"
+
+#include "cs237-aabb.hpp"
 
 #endif // !_CS237_HPP_

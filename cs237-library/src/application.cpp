@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <set>
+#include <vector>
 
 namespace cs237 {
 
@@ -215,6 +216,55 @@ int32_t Application::_findMemory (
 
 }
 
+VkFormat Application::_findBestFormat (
+    std::vector<VkFormat> candidates,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags features)
+{
+    for (VkFormat fmt : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(this->_gpu, fmt, &props);
+        if (tiling == VK_IMAGE_TILING_LINEAR) {
+            if ((props.linearTilingFeatures & features) == features) {
+                return fmt;
+            }
+        } else { // VK_IMAGE_TILING_OPTIMAL
+            if ((props.optimalTilingFeatures & features) == features) {
+                return fmt;
+            }
+        }
+    }
+    return VK_FORMAT_UNDEFINED;
+}
+
+VkFormat Application::_depthStencilBufferFormat (bool depth, bool stencil)
+{
+    if (!depth && !stencil) {
+        return VK_FORMAT_UNDEFINED;
+    }
+
+    // construct a list of valid candidate formats in best-to-worst order
+    std::vector<VkFormat> candidates;
+    if (!depth) {
+        candidates.push_back(VK_FORMAT_S8_UINT);                // 8-bit stencil; no depth
+    }
+    if (!stencil) {
+        candidates.push_back(VK_FORMAT_D32_SFLOAT);             // 32-bit depth; no stencil
+    }
+    candidates.push_back(VK_FORMAT_D32_SFLOAT_S8_UINT);         // 32-bit depth + 8-bit stencil
+    if (!stencil) {
+        candidates.push_back(VK_FORMAT_X8_D24_UNORM_PACK32);    // 24-bit depth; no stencil
+        candidates.push_back(VK_FORMAT_D16_UNORM);              // 16-bit depth; no stencil
+    }
+    candidates.push_back(VK_FORMAT_D16_UNORM_S8_UINT);          // 16-bit depth + 8-bit stencil
+
+    return this->_findBestFormat(
+        candidates,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+}
+
 void Application::_createLogicalDevice ()
 {
     VkDeviceCreateInfo createInfo{};
@@ -267,6 +317,87 @@ void Application::_createLogicalDevice ()
     vkGetDeviceQueue(this->_device, this->_qIdxs.present, 0, &this->_queues.present);
 
 }
+
+// create a Vulkan image; used for textures, depth buffers, etc.
+VkImage Application::_createImage (
+    uint32_t wid,
+    uint32_t ht, VkFormat format,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage)
+{
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = wid;
+    imageInfo.extent.height = ht;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkImage image;
+    auto sts = vkCreateImage(this->_device, &imageInfo, nullptr, &image);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create image!");
+    }
+
+    return image;
+}
+
+VkDeviceMemory Application::_allocImageMemory (VkImage img, VkMemoryPropertyFlags props)
+{
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(this->_device, img, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = this->_findMemory(memRequirements.memoryTypeBits, props);
+
+    VkDeviceMemory mem;
+    if (vkAllocateMemory(this->_device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
+        ERROR("unable to allocate image memory!");
+    }
+
+    vkBindImageMemory(this->_device, img, mem, 0);
+
+    return mem;
+}
+
+VkImageView Application::_createImageView (
+    VkImage img,
+    VkFormat fmt,
+    VkImageAspectFlags aspectFlags)
+{
+    assert (img != VK_NULL_HANDLE);
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.image = img;
+    viewInfo.format = fmt;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    auto sts = vkCreateImageView(this->_device, &viewInfo, nullptr, &imageView);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create texture image view!");
+    }
+
+    return imageView;
+
+}
+
+
 
 // Get the list of supported extensions
 //
