@@ -48,7 +48,9 @@ find_package(vulkan 1.3 REQUIRED)
 else()
 find_package(glfw3 3.3 REQUIRED)
 find_package(Vulkan 1.3 REQUIRED)
+find_package(X11 REQUIRED)
 endif()
+find_package(PNG REQUIRED)
 
 # compiler for shader programs
 #
@@ -83,6 +85,25 @@ if (CS237_ENABLE_DOXYGEN)
   if (DOXYGEN_FOUND)
    # TODO
   endif()
+endif()
+
+# path to include files
+include_directories(
+  ${GLFW_INCLUDE_DIR}
+  ${GLM_INCLUDE_DIR}
+  ${VULKAN_INCLUDE_DIR}
+  ${PNG_INCLUDE_DIR}
+  ${CS237_INCLUDE_DIR})
+
+# path to include files
+link_libraries(${GLFW_LIBRARY})
+link_libraries(${VULKAN_LIBRARY})
+link_libraries(${PNG_LIBRARY})
+
+# on Linux, we need X11
+if (${CMAKE_HOST_LINUX})
+include_directories(${X11_INCLUDE_DIR})
+link_libraries(${X11_LIBRARIES})
 endif()
 
 # the subdirectory for the labs
