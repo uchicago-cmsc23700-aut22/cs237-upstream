@@ -9,8 +9,12 @@
 #
 
 set(SRCS
+  aabb.cpp
   application.cpp
   memory-obj.cpp
+  mtl-reader.cpp
+  obj-reader.cpp
+  obj.cpp
   window.cpp
   shader.cpp)
 
