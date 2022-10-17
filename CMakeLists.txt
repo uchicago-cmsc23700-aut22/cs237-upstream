@@ -50,7 +50,7 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(Vulkan 1.3 REQUIRED)
 find_package(X11 REQUIRED)
 endif()
-find_package(PNG REQUIRED)
+find_package(PNG 1.5 REQUIRED)
 
 # compiler for shader programs
 #
@@ -95,7 +95,7 @@ include_directories(
   ${PNG_INCLUDE_DIR}
   ${CS237_INCLUDE_DIR})
 
-# path to include files
+# libraries
 link_libraries(${GLFW_LIBRARY})
 link_libraries(${VULKAN_LIBRARY})
 link_libraries(${PNG_LIBRARY})

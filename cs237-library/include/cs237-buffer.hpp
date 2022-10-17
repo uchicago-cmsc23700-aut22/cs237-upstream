@@ -87,9 +87,15 @@ public:
 class IndexBuffer : public Buffer {
 public:
 
-    IndexBuffer (Application *app, size_t sz)
-      : Buffer (app, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sz)
+    IndexBuffer (Application *app, uint32_t nIndices, size_t sz)
+      : Buffer (app, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sz), _nIndices(nIndices)
     { }
+
+    uint32_t nIndices () const { return this->_nIndices; }
+
+private:
+    uint32_t _nIndices;
+
 };
 
 //! Buffer class for uniform data

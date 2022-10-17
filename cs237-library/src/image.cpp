@@ -476,9 +476,11 @@ ImageBase::ImageBase (uint32_t nd, Channels chans, ChannelTy ty, size_t npixels)
     this->_data = std::malloc(this->_nBytes);
 }
 
-ImageBase::~ImageBase () {
-    if (this->_data != nullptr)
+ImageBase::~ImageBase ()
+{
+    if (this->_data != nullptr) {
         std::free(this->_data);
+    }
 }
 
 unsigned int ImageBase::nChannels () const
@@ -489,6 +491,59 @@ unsigned int ImageBase::nChannels () const
 size_t ImageBase::nBytesPerPixel () const
 {
     return sizeOfType (this->_type);
+}
+
+void ImageBase::addAlphaChannel ()
+{
+    if (this->_chans == Channels::RGB) {
+        this->_chans = Channels::RGBA;
+    }
+    else if (this->_chans != Channels::BGR) {
+        this->_chans = Channels::BGRA;
+    }
+    else {
+        return;
+    }
+
+    switch (this->_type) {
+    case ChannelTy::U8: {
+            uint32_t nPixels = this->_nBytes / 3;
+            uint8_t *newImg = (uint8_t *) std::malloc (4 * nPixels);
+            uint8_t *dstP = newImg;
+            uint8_t *srcP = reinterpret_cast<uint8_t *>(this->_data);
+            for (int i = 0;  i < nPixels;  ++i) {
+                dstP[0] = srcP[0];
+                dstP[1] = srcP[1];
+                dstP[2] = srcP[2];
+                dstP[3] = 0xff;
+                dstP += 4;
+                srcP += 3;
+            }
+            std::free(this->_data);
+            this->_data = newImg;
+            this->_nBytes = 4 * nPixels;
+        } break;
+    case ChannelTy::U16: {
+            uint32_t nPixels = this->_nBytes / 6;
+            uint16_t *newImg = (uint16_t *) std::malloc (8 * nPixels);
+            uint16_t *dstP = newImg;
+            uint16_t *srcP = reinterpret_cast<uint16_t *>(this->_data);
+            for (int i = 0;  i < nPixels;  ++i) {
+                dstP[0] = srcP[0];
+                dstP[1] = srcP[1];
+                dstP[2] = srcP[2];
+                dstP[3] = 0xffff;
+                dstP += 4;
+                srcP += 3;
+            }
+            std::free(this->_data);
+            this->_data = newImg;
+            this->_nBytes = 8 * nPixels;
+        } break;
+    default:
+        ERROR ("unsupported channel type");
+    }
+
 }
 
 } /* namespace __detail */
@@ -518,7 +573,13 @@ Image1D::Image1D (std::string const &file)
         std::cerr << "Image2D::Image1D: unable to load image file \"" << file << "\"" << std::endl;
         exit (1);
     }
-    this->_nBytes = numChannels(this->_chans) * this->_wid * sizeOfType(this->_type);
+    int nChannels = numChannels(this->_chans);
+    this->_nBytes = nChannels * this->_wid * sizeOfType(this->_type);
+
+    // because Vulkan prefers 4-channel images
+    if (nChannels == 3) {
+        this->addAlphaChannel();
+    }
 
     inS.close();
 }
@@ -567,9 +628,15 @@ Image2D::Image2D (std::string const &file, bool flip)
         std::cerr << "Image2D::Image2D: unable to load image file \"" << file << "\"" << std::endl;
         exit (1);
     }
-    this->_nBytes = numChannels(this->_chans) * this->_wid * this->_ht * sizeOfType(this->_type);
+    int nChannels = numChannels(this->_chans);
+    this->_nBytes = nChannels * this->_wid * this->_ht * sizeOfType(this->_type);
 
     inS.close();
+
+    // because Vulkan prefers 4-channel images
+    if (nChannels == 3) {
+        this->addAlphaChannel();
+    }
 }
 
 Image2D::Image2D (std::ifstream &inS, bool flip)
@@ -580,7 +647,13 @@ Image2D::Image2D (std::ifstream &inS, bool flip)
         std::cerr << "Image2D::Image2D: unable to load 2D image" << std::endl;
         exit (1);
     }
-    this->_nBytes = numChannels(this->_chans) * this->_wid * this->_ht * sizeOfType(this->_type);
+    int nChannels = numChannels(this->_chans);
+    this->_nBytes = nChannels * this->_wid * this->_ht * sizeOfType(this->_type);
+
+    // because Vulkan prefers 4-channel images
+    if (nChannels == 3) {
+        this->addAlphaChannel();
+    }
 }
 
 // write the image to a file

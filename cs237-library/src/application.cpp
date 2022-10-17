@@ -59,10 +59,16 @@ Application::Application (std::vector<const char *> &args, std::string const &na
 
     // create a Vulkan instance
     this->_createInstance();
+
+    // initialize the command pool
+    this->_initCommandPool();
 }
 
 Application::~Application ()
 {
+    // delete the command pool
+    vkDestroyCommandPool(this->_device, this->_cmdPool, nullptr);
+
     // destroy the logical device
     vkDestroyDevice(this->_device, nullptr);
 
@@ -112,9 +118,10 @@ void Application::_createInstance ()
     }
 
     // pick the physical device; we require fillModeNonSolid to support
-    // wireframes.
+    // wireframes and samplerAnisotropy for texture mapping
     VkPhysicalDeviceFeatures reqs{};
     reqs.fillModeNonSolid = VK_TRUE;
+    reqs.samplerAnisotropy = VK_TRUE;
     this->_selectDevice (&reqs);
 
     // create the logical device and get the queues
@@ -132,6 +139,9 @@ static bool hasFeatures (VkPhysicalDevice gpu, VkPhysicalDeviceFeatures *reqFeat
     vkGetPhysicalDeviceFeatures (gpu, &availFeatures);
 
     if (reqFeatures->fillModeNonSolid == availFeatures.fillModeNonSolid) {
+        return true;
+    }
+    else if (reqFeatures->samplerAnisotropy == availFeatures.samplerAnisotropy) {
         return true;
     }
     else {
@@ -160,7 +170,7 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
     // This code is brute force, but we only expect one or two devices.
     // Future versions will support checking for properties.
 
-// FIXME: we need to also check that the device supports swap chains!!!!
+// FIXME: we should also check that the device supports swap chains!!!!
 
     // we first look for a discrete GPU
     for (auto & dev : devices) {
@@ -302,9 +312,10 @@ void Application::_createLogicalDevice ()
     createInfo.enabledExtensionCount = static_cast<uint32_t>(kDeviceExts.size());
     createInfo.ppEnabledExtensionNames = kDeviceExts.data();
 
-    // for now, we are not enabling any extra features
+    // for now, we are only enabling a couple of extra
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.fillModeNonSolid = VK_TRUE;
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
     createInfo.pEnabledFeatures = &deviceFeatures;
 
     // create the logical device
@@ -397,7 +408,235 @@ VkImageView Application::_createImageView (
 
 }
 
+VkBuffer Application::_createBuffer (size_t size, VkBufferUsageFlags usage)
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    VkBuffer buf;
+    if (vkCreateBuffer(this->_device, &bufferInfo, nullptr, &buf) != VK_SUCCESS) {
+        ERROR("unable to create buffer!");
+    }
+
+    return buf;
+}
+
+VkDeviceMemory Application::_allocBufferMemory (VkBuffer buf, VkMemoryPropertyFlags props)
+{
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(this->_device, buf, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = this->_findMemory(memRequirements.memoryTypeBits, props);
+
+    VkDeviceMemory mem;
+    if (vkAllocateMemory(this->_device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
+        ERROR("unable to allocate buffer memory!");
+    }
+
+    vkBindBufferMemory(this->_device, buf, mem, 0);
+
+    return mem;
+
+}
+
+void Application::_transitionImageLayout (
+    VkImage image,
+    VkFormat format,
+    VkImageLayout oldLayout,
+    VkImageLayout newLayout)
+{
+        VkCommandBuffer cmdBuf = this->_newCommandBuf();
+
+        this->_beginCommands(cmdBuf);
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags srcStage;
+        VkPipelineStageFlags dstStage;
+
+        if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        && (newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        }
+        else if ((oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        && (newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else {
+            ERROR("unsupported layout transition!");
+        }
+
+        vkCmdPipelineBarrier(
+            cmdBuf, srcStage, dstStage,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        this->_endCommands(cmdBuf);
+        this->_submitCommands(cmdBuf);
+        this->_freeCommandBuf(cmdBuf);
+
+}
+
+void Application::_copyBuffer (VkBuffer srcBuf, VkBuffer dstBuf, size_t size)
+{
+    VkCommandBuffer cmdBuf = this->_newCommandBuf();
+
+    this->_beginCommands(cmdBuf);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(cmdBuf, srcBuf, dstBuf, 1, &copyRegion);
+
+    this->_endCommands(cmdBuf);
+    this->_submitCommands(cmdBuf);
+    this->_freeCommandBuf(cmdBuf);
+
+}
+
+void Application::_copyBufferToImage (
+        VkImage dstImg, VkBuffer srcBuf, size_t size,
+        uint32_t wid, uint32_t ht, uint32_t depth)
+{
+    VkCommandBuffer cmdBuf = this->_newCommandBuf();
+
+    this->_beginCommands(cmdBuf);
+
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = { wid, ht, depth };
+
+    vkCmdCopyBufferToImage(
+        cmdBuf, srcBuf, dstImg,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    this->_endCommands(cmdBuf);
+    this->_submitCommands(cmdBuf);
+    this->_freeCommandBuf(cmdBuf);
+
+}
+
+void Application::_initCommandPool ()
+{
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = this->_qIdxs.graphics;
+
+    auto sts = vkCreateCommandPool(this->_device, &poolInfo, nullptr, &this->_cmdPool);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create command pool!");
+    }
+}
+
+VkCommandBuffer Application::_newCommandBuf ()
+{
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = this->_cmdPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuf;
+    auto sts = vkAllocateCommandBuffers(this->_device, &allocInfo, &cmdBuf);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to allocate command buffer!");
+    }
+
+    return cmdBuf;
+}
+
+void Application::_beginCommands (VkCommandBuffer cmdBuf)
+{
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(cmdBuf, &beginInfo) != VK_SUCCESS) {
+        ERROR("unable to begin recording command buffer!");
+    }
+}
+
+void Application::_endCommands (VkCommandBuffer cmdBuf)
+{
+    if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
+        ERROR("unable to record command buffer!");
+    }
+}
+
+void Application::_submitCommands (VkCommandBuffer cmdBuf)
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuf;
+
+    auto grQ = this->_queues.graphics;
+    vkQueueSubmit(grQ, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(grQ);
+
+}
+
+VkSampler Application::createSampler (Application::SamplerInfo const &info)
+{
+    VkPhysicalDeviceProperties props{};
+    vkGetPhysicalDeviceProperties(this->_gpu, &props);
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = info.magFilter;
+    samplerInfo.minFilter = info.minFilter;
+    samplerInfo.mipmapMode = info.mipmapMode;
+    samplerInfo.addressModeU = info.addressModeU;
+    samplerInfo.addressModeV = info.addressModeV;
+    samplerInfo.addressModeW = info.addressModeW;
+    samplerInfo.borderColor = info.borderColor;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = props.limits.maxSamplerAnisotropy;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+    VkSampler sampler;
+    auto sts = vkCreateSampler(this->_device, &samplerInfo, nullptr, &sampler);
+    if (sts != VK_SUCCESS) {
+        ERROR("unable to create texture sampler!");
+    }
+
+    return sampler;
+}
 
 // Get the list of supported extensions
 //

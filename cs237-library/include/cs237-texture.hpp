@@ -31,8 +31,8 @@ protected:
 
     TextureBase (
         Application *app,
-        uint32_t wid, uint32_t ht, VkFormat fmt,
-        void *data, size_t nBytes);
+        uint32_t wid, uint32_t ht,
+        cs237::__detail::ImageBase const *img);
     ~TextureBase ();
 
     //! \brief create a VkBuffer object
@@ -52,7 +52,6 @@ protected:
     {
         return this->_app->_allocBufferMemory (buf, props);
     }
-
 
 };
 

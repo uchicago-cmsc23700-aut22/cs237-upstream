@@ -19,12 +19,17 @@
 
 namespace cs237 {
 
+namespace __detail { class TextureBase; }
+
 //! the base class for applications
 class Application {
 
 friend class Window;
 friend class Buffer;
 friend class MemoryObj;
+friend class __detail::TextureBase;
+friend class Texture1D;
+friend class Texture2D;
 
 public:
 
@@ -57,6 +62,53 @@ public:
     //! \return The vector of VkLayerProperties for the supported layers
     static std::vector<VkLayerProperties> supportedLayers ();
 
+    //! Information for creating a sampler object.  This is more limited than Vulkan's
+    //! VkSamplerCreateInfo structure, but should cover the common cases used in this
+    //! class.
+    struct SamplerInfo {
+        VkFilter magFilter;
+        VkFilter minFilter;
+        VkSamplerMipmapMode mipmapMode;
+        VkSamplerAddressMode addressModeU;
+        VkSamplerAddressMode addressModeV;
+        VkSamplerAddressMode addressModeW;
+        VkBorderColor borderColor;
+
+        SamplerInfo ()
+          : magFilter(VK_FILTER_LINEAR), minFilter(VK_FILTER_LINEAR),
+            mipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR),
+            addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+            addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+            addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+            borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
+        { }
+
+        //! sampler info for 1D texture
+        SamplerInfo (
+            VkFilter magF, VkFilter minF, VkSamplerMipmapMode mm,
+            VkSamplerAddressMode am, VkBorderColor color)
+          : magFilter(magF), minFilter(minF), mipmapMode(mm),
+            addressModeU(am), addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+            addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT), borderColor(color)
+        { }
+
+        //! sampler info for 2D texture
+        SamplerInfo (
+            VkFilter magF, VkFilter minF, VkSamplerMipmapMode mm,
+            VkSamplerAddressMode am1, VkSamplerAddressMode am2,
+            VkBorderColor color)
+          : magFilter(magF), minFilter(minF), mipmapMode(mm),
+            addressModeU(am1), addressModeV(am2),
+            addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT), borderColor(color)
+        { }
+
+    };
+
+    //! \brief Create a texture sampler as specified
+    //! \param info  a simplified sampler specification
+    //! \return the created sampler
+    VkSampler createSampler (SamplerInfo const &info);
+
 protected:
     //! information about queue families
     template <typename T>
@@ -80,6 +132,7 @@ protected:
     VkDevice _device;           //!< the logical device that we are using to render
     Queues<uint32_t> _qIdxs;    //!< the queue family indices
     Queues<VkQueue> _queues;    //!< the device queues that we are using
+    VkCommandPool _cmdPool;     //!< pool for allocating command buffers
 
     //! \brief A helper function to create and initialize the Vulkan instance
     //! used by the application.
@@ -156,7 +209,71 @@ protected:
     //! \return the device memory that has been bound to the image
     VkDeviceMemory _allocImageMemory (VkImage img, VkMemoryPropertyFlags props);
 
-    VkImageView _createImageView (VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+    //! \brief A helper function for creating a Vulkan image view object for an image
+    VkImageView _createImageView (
+        VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
+    //! \brief A helper function for changing the layout of an image
+    void _transitionImageLayout (
+        VkImage image,
+        VkFormat format,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout);
+
+    //! \brief create a VkBuffer object
+    //! \param size   the size of the buffer in bytes
+    //! \param usage  the usage of the buffer
+    //! \return the allocated buffer
+    VkBuffer _createBuffer (size_t size, VkBufferUsageFlags usage);
+
+    //! \brief A helper function for allocating and binding device memory for a buffer
+    //! \param buf    the buffer to allocate memory for
+    //! \param props  requred memory properties
+    //! \return the device memory that has been bound to the buffer
+    VkDeviceMemory _allocBufferMemory (VkBuffer buf, VkMemoryPropertyFlags props);
+
+    //! \brief copy data from one buffer to another using the GPU
+    //! \param dstBuf the destination buffer
+    //! \param srcBuf the source buffer
+    //! \param size   the size (in bytes) of data to copy
+    void _copyBuffer (VkBuffer dstBuf, VkBuffer srcBuf, size_t size);
+
+    //! \brief copy data from a buffer to an image
+    //! \param dstImg the destination image
+    //! \param srcBuf the source buffer
+    //! \param size   the size (in bytes) of data to copy
+    //! \param wid    the image width
+    //! \param ht     the image height (default 1)
+    //! \param depth  the image depth (default 1)
+    void _copyBufferToImage (
+        VkImage dstImg, VkBuffer srcBuf, size_t size,
+        uint32_t wid, uint32_t ht=1, uint32_t depth=1);
+
+    //! \brief allocate the command pool for the window
+    void _initCommandPool ();
+
+    //! \brief create and initialize a command buffer
+    //! \return the fresh command buffer
+    VkCommandBuffer _newCommandBuf ();
+
+    //! \brief begin recording commands in the give command buffer
+    void _beginCommands (VkCommandBuffer cmdBuf);
+
+    //! \brief end the recording of commands in the give command buffer
+    //! \param cmdBuf the command buffer that we are recording in
+    void _endCommands (VkCommandBuffer cmdBuf);
+
+    //! \brief end the commands and submit the buffer to the graphics queue.
+    //! \param cmdBuf the command buffer to submit
+    void _submitCommands (VkCommandBuffer cmdBuf);
+
+    //! \brief free the command buffer
+    //! \param cmdBuf the command buffer to free
+    void _freeCommandBuf (VkCommandBuffer & cmdBuf)
+    {
+        vkFreeCommandBuffers(this->_device, this->_cmdPool, 1, &cmdBuf);
+    }
+
 };
 
 } // namespace cs237

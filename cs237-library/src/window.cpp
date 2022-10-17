@@ -331,6 +331,7 @@ void Window::_createSwapChain (bool depth, bool stencil)
     }
 
     if (dsFormat != VK_FORMAT_UNDEFINED) {
+        // initialize the depth/stencil-buffer
         DepthStencilBuffer dsBuf;
         dsBuf.format = dsFormat;
         dsBuf.image = this->_app->_createImage(
@@ -520,7 +521,11 @@ void Window::SwapChain::cleanup ()
 
 void Window::SyncObjs::allocate ()
 {
-    assert (this->imageAvailable == VK_NULL_HANDLE);
+    // this is for backward compatibility; we used to do the allocation as a separate
+    // call, the there is no reason for that.
+    if (this->imageAvailable != VK_NULL_HANDLE) {
+        return;
+    }
 
     // allocate synchronization objects
     VkSemaphoreCreateInfo semInfo{};

@@ -11,12 +11,14 @@
 set(SRCS
   aabb.cpp
   application.cpp
+  image.cpp
   memory-obj.cpp
   mtl-reader.cpp
   obj-reader.cpp
   obj.cpp
   window.cpp
-  shader.cpp)
+  shader.cpp
+  texture.cpp)
 
 # path to include files
 include_directories(

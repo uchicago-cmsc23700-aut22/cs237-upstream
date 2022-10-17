@@ -65,16 +65,24 @@ namespace __detail {
         ChannelTy type () const { return this->_type; }
         //! return the vulkan format of the image data
         VkFormat format () const { return toVkFormat(this->_chans, this->_type); }
-      //! the data pointer
+        //! the data pointer
         void *data () const { return this->_data; }
-      //! the total number of bytes of image data
+        //! the total number of bytes of image data
         size_t nBytes () const { return this->_nBytes; }
 
-      //! the number of channels (1, 2, 3, or 4)
+        //! the number of channels (1, 2, 3, or 4)
         unsigned int nChannels () const;
 
-      //! the number of bytes per pixel
+        //! the number of bytes per pixel
         size_t nBytesPerPixel () const;
+
+        //! add an opaque alpha channel to the imag
+        //!
+        //! This operation only works on images with RGB or BGR pixel format;
+        //! and is a no-op for other formats.
+        //! It is necessary, because many Vulkan implementations do not
+        //! support 24-bit pixels.
+        void addAlphaChannel ();
 
     protected:
         uint32_t _nDims;        //!< the number of dimensions (1 or 2)

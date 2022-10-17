@@ -20,6 +20,9 @@ extern "C" {
 //! the path to the root of the build directory
 #cmakedefine CS237_BINARY_DIR "@CS237_BINARY_DIR@"
 
+//! the path to the root of the source directory
+#cmakedefine CS237_SOURCE_DIR "@CS237_SOURCE_DIR@"
+
 #ifdef __cplusplus
 }
 #endif // C++

@@ -41,6 +41,7 @@ namespace cs237 {
 
 //! function for reporting errors by raising a runtime exception
 //! that includes the file and line number of the error.
+[[ noreturn ]]
 inline void ReportError (const char *file, int line, std::string const &msg)
 {
     std::string s = "[" + std::string(file) + ":" + std::to_string(line) + "] " + msg;
@@ -60,7 +61,8 @@ inline void ReportError (const char *file, int line, std::string const &msg)
 #include "cs237-window.hpp"
 #include "cs237-memory-obj.hpp"
 #include "cs237-buffer.hpp"
-
+#include "cs237-image.hpp"
+#include "cs237-texture.hpp"
 #include "cs237-aabb.hpp"
 
 #endif // !_CS237_HPP_
