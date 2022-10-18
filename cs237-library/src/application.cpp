@@ -312,7 +312,7 @@ void Application::_createLogicalDevice ()
     createInfo.enabledExtensionCount = static_cast<uint32_t>(kDeviceExts.size());
     createInfo.ppEnabledExtensionNames = kDeviceExts.data();
 
-    // for now, we are only enabling a couple of extra
+    // for now, we are only enabling a couple of extra features
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.fillModeNonSolid = VK_TRUE;
     deviceFeatures.samplerAnisotropy = VK_TRUE;
