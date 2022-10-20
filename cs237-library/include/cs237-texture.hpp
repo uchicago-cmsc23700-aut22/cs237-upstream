@@ -61,7 +61,9 @@ protected:
 class Texture1D : public __detail::TextureBase {
 public:
 
-    //! construct a 1D texture from a 1D image
+    //! \brief Construct a 1D texture from a 1D image
+    //! \param app  the owning application
+    //! \param img  the source image for the texture
     Texture1D (Application *app, Image1D const *img);
 
 };
@@ -70,8 +72,11 @@ public:
 class Texture2D : public __detail::TextureBase {
 public:
 
-    //! construct a 1D texture from a 1D image
-    Texture2D (Application *app, Image2D const *img);
+    //! \brief Construct a 1D texture from a 1D image
+    //! \param app     the owning application
+    //! \param img     the source image for the texture
+    //! \param mipmap  if true, generate mipmap levels for the texture.
+    Texture2D (Application *app, Image2D const *img, bool mipmap = false);
 };
 
 } // namespace cs237

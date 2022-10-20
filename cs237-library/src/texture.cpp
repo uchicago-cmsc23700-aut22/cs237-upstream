@@ -80,53 +80,16 @@ TextureBase::~TextureBase ()
 Texture1D::Texture1D (Application *app, Image1D const *img)
   : __detail::TextureBase(app, img->width(), 1, img)
 {
-    // create a staging buffer for copying the image
-    VkBuffer stagingBuf = this->_createBuffer (
-        img->nBytes(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    VkDeviceMemory stagingBufMem = this->_allocBufferMemory(
-        stagingBuf,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    // copy the image data to the staging buffer
-    void* data;
-    vkMapMemory(app->_device, stagingBufMem, 0, img->nBytes(), 0, &data);
-    memcpy(data, img->data(), img->nBytes());
-    vkUnmapMemory(app->_device, stagingBufMem);
-
-// TODO: transition the texture
-
-    // free up the staging buffer
-    vkFreeMemory(app->_device, stagingBufMem, nullptr);
-    vkDestroyBuffer(app->_device, stagingBuf, nullptr);
-
 }
 
 /******************** class Texture2D methods ********************/
 
-Texture2D::Texture2D (Application *app, Image2D const *img)
+Texture2D::Texture2D (Application *app, Image2D const *img, bool mipmap)
   : __detail::TextureBase(app, img->width(), img->height(), img)
 {
-    // create a staging buffer for copying the image
-    VkBuffer stagingBuf = this->_createBuffer (
-        img->nBytes(),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    VkDeviceMemory stagingBufMem = this->_allocBufferMemory(
-        stagingBuf,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    // copy the image data to the staging buffer
-    void* data;
-    vkMapMemory(app->_device, stagingBufMem, 0, img->nBytes(), 0, &data);
-    memcpy(data, img->data(), img->nBytes());
-    vkUnmapMemory(app->_device, stagingBufMem);
-
-// TODO: transition the texture
-
-    // free up the staging buffer
-    vkFreeMemory(app->_device, stagingBufMem, nullptr);
-    vkDestroyBuffer(app->_device, stagingBuf, nullptr);
-
+    if (mipmap) {
+        ERROR("mipmap generation not supported yet");
+    }
 }
 
 } // namespace cs237
