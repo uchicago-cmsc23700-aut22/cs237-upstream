@@ -49,18 +49,23 @@ else()
   find_package(glfw3 3.3 REQUIRED)
   find_package(Vulkan 1.3 REQUIRED)
   find_package(X11 REQUIRED)
+
+  # compiler for shader programs
+  #
+  if (Vulkan_GLSLANG_VALIDATOR_EXECUTABLE)
+    set(GLSLC ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
+  elseif (VULKAN_BIN_DIR)
+    set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
+  else()
+    message(FATAL_ERROR "unable to determine where glslangValidator lives")
+  endif()
+  #
+  if (Vulkan_LIBRARY)
+    set (VULKAN_LIBRARY ${Vulkan_LIBRARY})
+  endif()
+
 endif()
 find_package(PNG 1.5 REQUIRED)
-
-# compiler for shader programs
-#
-if (Vulkan_GLSLANG_VALIDATOR_EXECUTABLE)
-  set(GLSLC ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
-elseif (VULKAN_BIN_DIR)
-  set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
-else()
-  message(FATAL_ERROR "unable to determine where glslangValidator lives")
-endif()
 
 option (CS237_ENABLE_DOXYGEN "Enable doxygen for generating cs237 library documentation." OFF)
 option (CS237_VERBOSE_MAKEFILE "Enable verbose makefiles." OFF)
@@ -102,9 +107,9 @@ include_directories(
   ${CS237_INCLUDE_DIR})
 
 # libraries
-link_libraries(${GLFW_LIBRARY})
-link_libraries(${VULKAN_LIBRARY})
 link_libraries(${PNG_LIBRARY})
+link_libraries(${VULKAN_LIBRARY})
+link_libraries(${GLFW_LIBRARY})
 
 # on Linux, we need X11
 if (${CMAKE_HOST_LINUX})
