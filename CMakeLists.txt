@@ -55,7 +55,7 @@ find_package(PNG 1.5 REQUIRED)
 # compiler for shader programs
 #
 if (Vulkan_GLSLANG_VALIDATOR_EXECUTABLE)
-  set(GLSC ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
+  set(GLSLC ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
 elseif (VULKAN_BIN_DIR)
   set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
 else()
