@@ -64,7 +64,6 @@ public:
     {
         if (this->_isVis) {
             this->draw();
-            glfwSwapBuffers (this->_win);
         }
     }
 
