@@ -116,7 +116,7 @@ if(GLFW_INCLUDE_DIR AND EXISTS "${GLFW_INCLUDE_DIR}/GLFW/glfw3.h")
   unset(GLFW_VERSION_REVISION)
 endif ()
 
-find_package_handle_standard_args(glfw
+find_package_handle_standard_args(glfw3
   REQUIRED_VARS GLFW_INCLUDE_DIR GLFW_LIBRARY
   VERSION_VAR GLFW_VERSION
 )
