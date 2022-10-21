@@ -43,18 +43,24 @@ set(CMAKE_MODULE_PATH
 # Vulkan differ between macOS and Linux
 find_package(glm 0.9.9 REQUIRED)
 if (${CMAKE_HOST_APPLE})
-find_package(glfw 3.3 REQUIRED)
-find_package(vulkan 1.3 REQUIRED)
+  find_package(glfw 3.3 REQUIRED)
+  find_package(vulkan 1.3 REQUIRED)
 else()
-find_package(glfw3 3.3 REQUIRED)
-find_package(Vulkan 1.3 REQUIRED)
-find_package(X11 REQUIRED)
+  find_package(glfw3 3.3 REQUIRED)
+  find_package(Vulkan 1.3 REQUIRED)
+  find_package(X11 REQUIRED)
 endif()
 find_package(PNG 1.5 REQUIRED)
 
 # compiler for shader programs
 #
-set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
+if (Vulkan_GLSLANG_VALIDATOR_EXECUTABLE)
+  set(GLSC ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
+elseif (VULKAN_BIN_DIR)
+  set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
+else()
+  message(FATAL_ERROR "unable to determine where glslangValidator lives")
+endif()
 
 option (CS237_ENABLE_DOXYGEN "Enable doxygen for generating cs237 library documentation." OFF)
 option (CS237_VERBOSE_MAKEFILE "Enable verbose makefiles." OFF)
