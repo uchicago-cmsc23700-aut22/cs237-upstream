@@ -121,4 +121,7 @@ endif()
 #
 add_subdirectory(labs EXCLUDE_FROM_ALL)
 
-# TODO: subdirectory for individual projects
+# the subdirectory for the projects
+#
+add_subdirectory(projs EXCLUDE_FROM_ALL)
+
