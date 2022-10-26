@@ -12,6 +12,8 @@ set(SRCS
   aabb.cpp
   application.cpp
   image.cpp
+  json.cpp
+  json-parser.cpp
   memory-obj.cpp
   mtl-reader.cpp
   obj-reader.cpp
