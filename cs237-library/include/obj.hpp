@@ -65,7 +65,9 @@ struct Material {
     std::string         normalMap;      //!< optional normal map for bump mapping
 }; // struct Material
 
-//! A mesh that corresponds to a group in the obj file
+//! A Group is a connected mesh that has a single material.  It is represented
+//! by per-vertex data (position, normal, and texture coordinate) and an index
+//! array that defines a list of triangles.
 struct Group {
     std::string         name;           //!< name of this group */
     int                 material;       //!< index to material for group (-1 for no material)
@@ -99,7 +101,7 @@ class Model {
     int NumGroups () const { return this->_groups.size(); }
   //! get a group by index
     const OBJ::Group & Group (int i) const { return this->_groups[i]; }
-  //! iterator for looping over the groups in the module
+  //! iterator for looping over the groups in the model
     std::vector<OBJ::Group>::const_iterator beginGroups () const { return this->_groups.begin(); }
   //! terminator for looping over the groups in the module
     std::vector<OBJ::Group>::const_iterator endGroups () const { return this->_groups.end(); }

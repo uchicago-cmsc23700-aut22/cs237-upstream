@@ -43,7 +43,7 @@ class Input {
     void error (std::string msg)
     {
 #ifndef NDEBUG
-        std::cerr << "json::ParseFile(" << this->_file << "): " << msg
+        std::cerr << "json::parseFile(" << this->_file << "): " << msg
             << " at line " << this->_lnum << std::endl;
         std::cerr << "    input = \"";
         int n = this->avail();
@@ -95,32 +95,32 @@ Input::Input (std::string filename)
 }
 
 // forward decls
-static bool SkipWhitespace (Input &datap);
-static Value *Parse (Input &datap);
+static bool skipWhitespace (Input &datap);
+static Value *parse (Input &datap);
 
 // parse a json file; this returns nullptr if there is a parsing error
-Value *ParseFile (std::string filename)
+Value *parseFile (std::string filename)
 {
   // open the json file for reading
     Input datap(filename);
     if (datap.eof()) {
 #ifndef NDEBUG
-        std::cerr << "json::ParseFile: unable to read \"" << filename << "\"" << std::endl;
+        std::cerr << "json::parseFile: unable to read \"" << filename << "\"" << std::endl;
 #endif
         return nullptr;
     }
 
-    if (! SkipWhitespace (datap)) {
+    if (! skipWhitespace (datap)) {
         return nullptr;
     }
 
-    Value *value = Parse (datap);
+    Value *value = parse (datap);
 
     return value;
 
 }
 
-static bool SkipWhitespace (Input &datap)
+static bool skipWhitespace (Input &datap)
 {
     while ((! datap.eof()) && isspace(*datap))
         datap++;
@@ -133,7 +133,7 @@ static bool SkipWhitespace (Input &datap)
         return true;
 }
 
-static bool ExtractString (Input &datap, std::string &str)
+static bool extractString (Input &datap, std::string &str)
 {
     str = "";
 
@@ -188,7 +188,7 @@ static bool ExtractString (Input &datap, std::string &str)
     return false;
 }
 
-static int64_t ParseInt (Input &datap)
+static int64_t parseInt (Input &datap)
 {
     int64_t n = 0;
     while (*datap != 0 && isdigit(*datap)) {
@@ -199,7 +199,7 @@ static int64_t ParseInt (Input &datap)
     return n;
 }
 
-static double ParseDecimal (Input &datap)
+static double parseDecimal (Input &datap)
 {
     double decimal = 0.0;
     double factor = 0.1;
@@ -213,7 +213,7 @@ static double ParseDecimal (Input &datap)
     return decimal;
 }
 
-static Value *Parse (Input &datap)
+static Value *parse (Input &datap)
 {
     if (datap.eof()) {
         datap.error("unexpected end of file");
@@ -223,7 +223,7 @@ static Value *Parse (Input &datap)
   // Is it a string?
     if (*datap == '"') {
         std::string str;
-        if (! ExtractString(datap, str))
+        if (! extractString(datap, str))
             return nullptr;
         else
             return new String(str);
@@ -251,11 +251,11 @@ static Value *Parse (Input &datap)
 
         int64_t whole = 0;
 
-      // Parse the whole part of the number - only if it wasn't 0
+      // parse the whole part of the number - only if it wasn't 0
         if (*datap == '0')
             datap++;
         else if (isdigit(*datap))
-            whole = ParseInt(datap);
+            whole = parseInt(datap);
         else {
             datap.error("invalid number");
             return nullptr;
@@ -276,9 +276,9 @@ static Value *Parse (Input &datap)
             }
 
             // Find the decimal and sort the decimal place out
-            // Use ParseDecimal as ParseInt won't work with decimals less than 0.1
+            // Use parseDecimal as parseInt won't work with decimals less than 0.1
             // thanks to Javier Abadia for the report & fix
-            double decimal = ParseDecimal(datap);
+            double decimal = parseDecimal(datap);
 
             // Save the number
             r += decimal;
@@ -306,7 +306,7 @@ static Value *Parse (Input &datap)
             }
 
             // Sort the expo out
-            double expo = ParseInt(datap);
+            double expo = parseInt(datap);
             for (double i = 0.0; i < expo; i++) {
                 r = neg_expo ? (r / 10.0) : (r * 10.0);
             }
@@ -327,7 +327,7 @@ static Value *Parse (Input &datap)
 
         while (!datap.eof()) {
           // Whitespace at the start?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete object;
                 return nullptr;
             }
@@ -341,14 +341,14 @@ static Value *Parse (Input &datap)
           // We want a string now...
             std::string name;
 // CHECK: do we need to look for "?
-            if (! ExtractString(datap, name)) {
+            if (! extractString(datap, name)) {
                 datap.error("expected label");
                 delete object;
                 return nullptr;
             }
 
           // More whitespace?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete object;
                 return nullptr;
             }
@@ -362,13 +362,13 @@ static Value *Parse (Input &datap)
             datap++;
 
           // More whitespace?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete object;
                 return nullptr;
             }
 
           // The value is here
-            Value *value = Parse(datap);
+            Value *value = parse(datap);
             if (value == nullptr) {
                 delete object;
                 return nullptr;
@@ -378,7 +378,7 @@ static Value *Parse (Input &datap)
             object->insert(name, value);
 
           // More whitespace?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete object;
                 return nullptr;
             }
@@ -413,7 +413,7 @@ static Value *Parse (Input &datap)
 
         while (! datap.eof()) {
           // Whitespace at the start?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete array;
                 return nullptr;
             }
@@ -425,7 +425,7 @@ static Value *Parse (Input &datap)
             }
 
           // Get the value
-            Value *value = Parse(datap);
+            Value *value = parse(datap);
             if (value == nullptr) {
                 delete array;
                 return nullptr;
@@ -435,7 +435,7 @@ static Value *Parse (Input &datap)
             array->add(value);
 
           // More whitespace?
-            if (! SkipWhitespace(datap)) {
+            if (! skipWhitespace(datap)) {
                 delete array;
                 return nullptr;
             }
