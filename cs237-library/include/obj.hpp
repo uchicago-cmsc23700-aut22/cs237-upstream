@@ -103,7 +103,7 @@ class Model {
     const OBJ::Group & Group (int i) const { return this->_groups[i]; }
   //! iterator for looping over the groups in the model
     std::vector<OBJ::Group>::const_iterator beginGroups () const { return this->_groups.begin(); }
-  //! terminator for looping over the groups in the module
+  //! terminator for looping over the groups in the model
     std::vector<OBJ::Group>::const_iterator endGroups () const { return this->_groups.end(); }
 
   private:
