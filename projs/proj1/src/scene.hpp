@@ -26,7 +26,7 @@
 //! an instance of a model, which has its own position and color.
 struct SceneObj {
     int model;          //!< the ID of the model that defines the object's mesh
-    glm::vec3 pos;      //!< the world-space coordinates of the object
+    glm::mat4 toWorld;  //!< affine transform from object space to world space
     glm::vec3 color;    //!< the color of the object
 };
 
