@@ -45,6 +45,9 @@ find_package(glm 0.9.9 REQUIRED)
 if (${CMAKE_HOST_APPLE})
   find_package(glfw 3.3 REQUIRED)
   find_package(vulkan 1.3 REQUIRED)
+  # compiler for shader programs
+  #
+  set(GLSLC "${VULKAN_BIN_DIR}/glslangValidator")
 else()
   find_package(glfw3 3.3 REQUIRED)
   find_package(Vulkan 1.3 REQUIRED)
