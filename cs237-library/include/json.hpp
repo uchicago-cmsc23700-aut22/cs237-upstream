@@ -45,7 +45,7 @@ namespace json {
     class Null;
 
   // parse a JSON file; this returns nullptr if there is a parsing error
-    Value *ParseFile (std::string filename);
+    Value *parseFile (std::string filename);
 
   // virtual base class of JSON values
     class Value {

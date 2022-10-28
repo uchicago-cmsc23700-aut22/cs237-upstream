@@ -103,7 +103,7 @@ bool Scene::load (std::string const &path)
     std::string sceneDir = path + "/";
 
   // load the scene description file
-    json::Value *root = json::ParseFile(sceneDir + "scene.json");
+    json::Value *root = json::parseFile(sceneDir + "scene.json");
 
   // check for errors
     if (root == nullptr) {
