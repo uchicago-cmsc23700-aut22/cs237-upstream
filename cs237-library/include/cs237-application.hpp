@@ -109,6 +109,12 @@ public:
     //! \return the created sampler
     VkSampler createSampler (SamplerInfo const &info);
 
+    //! \brief get the logical device
+    VkDevice device () const { return this->_device; }
+
+    //! \brief access function for the physical device limits
+    const VkPhysicalDeviceLimits *limits () const { return &this->_props()->limits; }
+
 protected:
     //! information about queue families
     template <typename T>
@@ -129,6 +135,8 @@ protected:
     bool _debug;                //!< set when validation layers should be enabled
     VkInstance _instance;       //!< the Vulkan instance used by the application
     VkPhysicalDevice _gpu;      //!< the graphics card (aka device) that we are using
+    mutable VkPhysicalDeviceProperties *_propsCache;
+                                //!< a cache of the physical device properties
     VkDevice _device;           //!< the logical device that we are using to render
     Queues<uint32_t> _qIdxs;    //!< the queue family indices
     Queues<VkQueue> _queues;    //!< the device queues that we are using
@@ -137,6 +145,19 @@ protected:
     //! \brief A helper function to create and initialize the Vulkan instance
     //! used by the application.
     void _createInstance ();
+
+    //! get the physical-device properties pointer
+    const VkPhysicalDeviceProperties *_props () const
+    {
+        if (this->_propsCache == nullptr) {
+            this->_getPhysicalDeviceProperties();
+        }
+        return this->_propsCache;
+    }
+
+    //! \brief function that gets the physical-device properties and caches the
+    //!        pointer in the `_propsCache` field.
+    void _getPhysicalDeviceProperties () const;
 
     //! \brief A helper function to select the GPU to use
     //! \param reqFeatures  points to a structure specifying the required features

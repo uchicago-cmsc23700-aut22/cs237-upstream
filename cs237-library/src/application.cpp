@@ -66,6 +66,10 @@ Application::Application (std::vector<const char *> &args, std::string const &na
 
 Application::~Application ()
 {
+    if (this->_propsCache != nullptr) {
+        delete this->_propsCache;
+    }
+
     // delete the command pool
     vkDestroyCommandPool(this->_device, this->_cmdPool, nullptr);
 
@@ -204,6 +208,15 @@ void Application::_selectDevice (VkPhysicalDeviceFeatures *reqFeatures)
 
     ERROR("no available GPUs that support graphics");
 
+}
+
+// helper to set the properties cache variable
+void Application::_getPhysicalDeviceProperties () const
+{
+    assert (this->_propsCache == nullptr);
+
+    this->_propsCache = new VkPhysicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(this->_gpu, this->_propsCache);
 }
 
 int32_t Application::_findMemory (
@@ -611,9 +624,6 @@ void Application::_submitCommands (VkCommandBuffer cmdBuf)
 
 VkSampler Application::createSampler (Application::SamplerInfo const &info)
 {
-    VkPhysicalDeviceProperties props{};
-    vkGetPhysicalDeviceProperties(this->_gpu, &props);
-
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = info.magFilter;
@@ -624,7 +634,7 @@ VkSampler Application::createSampler (Application::SamplerInfo const &info)
     samplerInfo.addressModeW = info.addressModeW;
     samplerInfo.borderColor = info.borderColor;
     samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.maxAnisotropy = props.limits.maxSamplerAnisotropy;
+    samplerInfo.maxAnisotropy = this->limits()->maxSamplerAnisotropy;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
