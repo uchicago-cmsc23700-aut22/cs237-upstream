@@ -22,6 +22,7 @@
 #include <map>
 #include "cs237.hpp"
 #include "obj.hpp"
+#include "height-field.hpp"
 
 //! an instance of a model, which has its own position and color.
 struct SceneObj {
@@ -76,12 +77,6 @@ class Scene {
 
   //! terminator for looping over the lights in the scene
     std::vector<PointLight>::const_iterator endLights () const { return this->_lights.cend(); }
-
-  //! the light's unit-length direction vector
-    glm::vec3 lightDir () const { return this->_lightDir; }
-
-  //! the directional light's intensity
-    glm::vec3 lightIntensity () const { return this->_lightI; }
 
   //! the ambient light intensity in the scene
     glm::vec3 ambientLight () const { return this->_ambI; }

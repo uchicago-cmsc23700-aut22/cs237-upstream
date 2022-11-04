@@ -41,10 +41,10 @@ HeightField::HeightField (
     }
   // find the maximum height of the height-field
     int minHt, maxHt;
-    if (this->_img->type() == GL_UNSIGNED_BYTE) {
+    if (this->_img->type() == cs237::ChannelTy::U8) {
 	const uint8_t *p = static_cast<const uint8_t *>(this->_img->data());
 	minHt = maxHt = *p++;
-	for (int i = 1;  i < this->NumVerts();  i++, p++) {
+	for (int i = 1;  i < this->numVerts();  i++, p++) {
 	    if (*p > maxHt) maxHt = *p;
 	    else if (*p < minHt) minHt = *p;
 	}
@@ -52,7 +52,7 @@ HeightField::HeightField (
     else {
 	const uint16_t *p = static_cast<const uint16_t *>(this->_img->data());
 	minHt = maxHt = *p++;
-	for (int i = 1;  i < this->NumVerts();  i++, p++) {
+	for (int i = 1;  i < this->numVerts();  i++, p++) {
 	    if (*p > maxHt) maxHt = *p;
 	    else if (*p < minHt) minHt = *p;
 	}
@@ -66,7 +66,7 @@ HeightField::HeightField (
 uint16_t HeightField::valueAt (uint32_t row, uint32_t col) const
 {
     uint32_t idx = this->indexOf (row, col);
-    if (this->_img->type() == GL_UNSIGNED_BYTE) {
+    if (this->_img->type() == cs237::ChannelTy::U8) {
 	return static_cast<uint16_t>(static_cast<uint8_t *>(this->_img->data())[idx]);
     }
     else {

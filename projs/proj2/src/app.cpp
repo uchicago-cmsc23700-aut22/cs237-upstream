@@ -49,7 +49,7 @@ Proj2::Proj2 (std::vector<const char *> &args)
 
     // load the scene
     if (this->_scene.load(scenePath)) {
-        std::cerr << "proj1: cannot load scene from '" << scenePath << "'\n";
+        std::cerr << "proj2: cannot load scene from '" << scenePath << "'\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -59,7 +59,7 @@ Proj2::~Proj2 () { }
 void Proj2::run ()
 {
     // create the application window
-    Proj1Window *win = new Proj1Window (this);
+    Proj2Window *win = new Proj2Window (this);
 
     // wait until the window is closed
     while(! win->windowShouldClose()) {

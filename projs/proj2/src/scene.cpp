@@ -19,9 +19,9 @@
 #include <functional>
 #include <iostream>
 
-/* helper functions to make extracting values from the JSON easier */
+/* helper functions to make extracting values from the json easier */
 
-//! load a vec3f from a JSON object.
+//! load a vec3f from a json object.
 //! \return false if okay, true if there is an error.
 static bool loadVec3 (json::Object const *jv, glm::vec3 &vec)
 {
@@ -40,7 +40,7 @@ static bool loadVec3 (json::Object const *jv, glm::vec3 &vec)
     return false;
 }
 
-//! load a color3f from a JSON object.
+//! load a color3f from a json object.
 //! \return false if okay, true if there is an error.
 static bool loadColor (json::Object const *jv, glm::vec3 &color)
 {
@@ -59,7 +59,7 @@ static bool loadColor (json::Object const *jv, glm::vec3 &color)
     return false;
 }
 
-//! load a window size from a JSON object.
+//! load a window size from a json object.
 //! \return false if okay, true if there is an error.
 static bool loadSize (json::Object const *jv, int &wid, int &ht)
 {
@@ -77,15 +77,37 @@ static bool loadSize (json::Object const *jv, int &wid, int &ht)
 
 }
 
-//! load a float from a JSON object.
+//! load a ground size from a json object.
 //! \return false if okay, true if there is an error.
-static bool loadFloat (json::Number const *jv, float &f)
+bool loadSize (json::Object const *jv, float &wid, float &ht)
 {
     if (jv == nullptr) {
         return true;
     }
+
+    const json::Number *w = jv->fieldAsNumber ("wid");
+    const json::Number *h = jv->fieldAsNumber ("ht");
+
+    if ((w == nullptr) || (h == nullptr)) {
+        return true;
+    }
     else {
-        f = static_cast<float>(jv->realVal());
+        wid = static_cast<float>(w->realVal());
+        ht = static_cast<float>(h->realVal());
+        return false;
+    }
+
+}
+
+//! load a float from a json object.
+//! \return false if okay, true if there is an error.
+static bool loadFloat (json::Value const *jv, float &f)
+{
+    if ((jv == nullptr) || (! jv->isNumber())) {
+        return true;
+    }
+    else {
+        f = static_cast<float>(jv->asNumber()->realVal());
         return false;
     }
 }
@@ -149,7 +171,7 @@ bool Scene::load (std::string const &path)
     // allocate space for the lights in the scene
     this->_lights.resize(lights->length());
     for (int i = 0;  i < lights->length();  i++) {
-        json::Object const *light = (*objs)[i]->asObject();
+        json::Object const *light = (*lights)[i]->asObject();
         if (loadVec3 (light->fieldAsObject ("pos"), this->_lights[i].pos)
         ||  loadColor (light->fieldAsObject ("intensity"), this->_lights[i].intensity)) {
             std::cerr << "Invalid scene description in \"" << path
@@ -160,9 +182,9 @@ bool Scene::load (std::string const &path)
         json::Array const *aten = light->fieldAsArray("attenuation");
         if ((aten == nullptr)
         ||  (aten->length() != 3)
-        ||  loadFloat(aten[0], this->_lights[i].k0)
-        ||  loadFloat(aten[1], this->_lights[i].k1)
-        ||  loadFloat(aten[2], this->_lights[i].k2)) {
+        ||  loadFloat((*aten)[0], this->_lights[i].k0)
+        ||  loadFloat((*aten)[1], this->_lights[i].k1)
+        ||  loadFloat((*aten)[2], this->_lights[i].k2)) {
             std::cerr << "Invalid scene description in \"" << path
                 << "\"; bad attenuation array\n";
             return true;
@@ -171,7 +193,7 @@ bool Scene::load (std::string const &path)
         this->_lights[i].intensity = glm::clamp(this->_lights[i].intensity, 0.0f, 1.0f);
     }
 
-    // get the object array from the JSON tree and check that it is non-empty
+    // get the object array from the json tree and check that it is non-empty
     json::Array const *objs = rootObj->fieldAsArray("objects");
     if ((objs == nullptr) || (objs->length() == 0)) {
         std::cerr << "Invalid scene description in \"" << path
@@ -191,7 +213,7 @@ bool Scene::load (std::string const &path)
     for (int i = 0;  i < objs->length();  i++) {
         json::Object const *object = (*objs)[i]->asObject();
         if (object == nullptr) {
-            std::cerr << "Expected array of JSON objects for field 'objects' in \""
+            std::cerr << "Expected array of json objects for field 'objects' in \""
                 << path << "\"\n";
             return true;
         }
@@ -240,18 +262,18 @@ bool Scene::load (std::string const &path)
     }
 
     // load the ground information (if present)
-    const JSON::Object *ground = rootObj->fieldAsObject ("ground");
+    const json::Object *ground = rootObj->fieldAsObject ("ground");
     if (ground != nullptr) {
         float wid, ht;
         float vScale;
-        cs237::color3f color;
-        JSON::String const *hf = ground->fieldAsString("height-field");
-        JSON::String const *cmap = ground->fieldAsString("color-map");
-        JSON::String const *nmap = ground->fieldAsString("normal-map");
+        glm::vec3 color;
+        json::String const *hf = ground->fieldAsString("height-field");
+        json::String const *cmap = ground->fieldAsString("color-map");
+        json::String const *nmap = ground->fieldAsString("normal-map");
         if ((hf == nullptr) || (cmap == nullptr) || (nmap == nullptr)
-        ||  LoadSize (ground->fieldAsObject("size"), wid, ht)
-        ||  LoadFloat (ground->fieldAsNumber ("v-scale"), vScale)
-        ||  LoadColor (ground->fieldAsObject("color"), color)) {
+        ||  loadSize (ground->fieldAsObject("size"), wid, ht)
+        ||  loadFloat (ground->fieldAsNumber ("v-scale"), vScale)
+        ||  loadColor (ground->fieldAsObject("color"), color)) {
             std::cerr << "Invalid ground description in \"" << path << "\"\n";
             return true;
         }
@@ -271,7 +293,7 @@ bool Scene::load (std::string const &path)
         return true;
     }
 
-    // free up the space used by the JSON object
+    // free up the space used by the json object
     delete root;
 
     return false;
