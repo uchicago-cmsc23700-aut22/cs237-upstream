@@ -131,7 +131,7 @@ bool Scene::load (std::string const &path)
 
     // load the lighting information
     const json::Object *lighting = rootObj->fieldAsObject ("lighting");
-    if ((light == nullptr)
+    if ((lighting == nullptr)
     ||  loadColor (lighting->fieldAsObject ("ambient"), this->_ambI)) {
         std::cerr << "Invalid scene description in \"" << path
             << "\"; bad lighting\n";
@@ -140,23 +140,35 @@ bool Scene::load (std::string const &path)
     // make sure that the ambient-light intensity is in 0..1 range
     this->_ambI = glm::clamp(this->_ambI, 0.0f, 1.0f);
     // get the array of point lights
-    json::Array const *lights = light->fieldAsArray("lights");
+    json::Array const *lights = lighting->fieldAsArray("lights");
     if ((lights == nullptr) || (lights->length() == 0)) {
         std::cerr << "Invalid scene description in \"" << path
             << "\"; bad lights array\n";
         return true;
     }
+    // allocate space for the lights in the scene
+    this->_lights.resize(lights->length());
     for (int i = 0;  i < lights->length();  i++) {
-        PointLight light{};
-        if (loadVec3 (light->fieldAsObject ("pos"), light.pos)
-        ||  loadColor (light->fieldAsObject ("intensity"), light.intensity)) {
+        json::Object const *light = (*objs)[i]->asObject();
+        if (loadVec3 (light->fieldAsObject ("pos"), this->_lights[i].pos)
+        ||  loadColor (light->fieldAsObject ("intensity"), this->_lights[i].intensity)) {
             std::cerr << "Invalid scene description in \"" << path
                 << "\"; bad lighting\n";
             return true;
         }
-/* TODO: get attenuation coefficients */
+        // get attenuation coefficients
+        json::Array const *aten = light->fieldAsArray("attenuation");
+        if ((aten == nullptr)
+        ||  (aten->length() != 3)
+        ||  loadFloat(aten[0], this->_lights[i].k0)
+        ||  loadFloat(aten[1], this->_lights[i].k1)
+        ||  loadFloat(aten[2], this->_lights[i].k2)) {
+            std::cerr << "Invalid scene description in \"" << path
+                << "\"; bad attenuation array\n";
+            return true;
+        }
         // make sure that the light intensity is in 0..1 range
-        light.intensity = glm::clamp(light.intensity, 0.0f, 1.0f);
+        this->_lights[i].intensity = glm::clamp(this->_lights[i].intensity, 0.0f, 1.0f);
     }
 
     // get the object array from the JSON tree and check that it is non-empty
@@ -192,7 +204,7 @@ bool Scene::load (std::string const &path)
         ||  loadVec3 (frame->fieldAsObject("y-axis"), yAxis)
         ||  loadVec3 (frame->fieldAsObject("z-axis"), zAxis)
         ||  loadColor (object->fieldAsObject("color"), this->_objs[i].color)) {
-            std::cerr << "Invalid objects description in \"" << path << "\"" << std::endl;
+            std::cerr << "Invalid objects description in \"" << path << "\"\n";
             return true;
         }
         // have we already loaded this model?
