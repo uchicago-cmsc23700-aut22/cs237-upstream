@@ -102,12 +102,12 @@ bool Scene::load (std::string const &path)
 
     std::string sceneDir = path + "/";
 
-  // load the scene description file
+    // load the scene description file
     json::Value *root = json::parseFile(sceneDir + "scene.json");
 
-  // check for errors
+    // check for errors
     if (root == nullptr) {
-        std::cerr << "Unable to load scene \"" << path << "\"" << std::endl;
+        std::cerr << "Unable to load scene \"" << path << "\"\n";
         return true;
     } else if (! root->isObject()) {
         std::cerr << "Invalid scene description in \"" << path
@@ -116,7 +116,7 @@ bool Scene::load (std::string const &path)
     }
     const json::Object *rootObj = root->asObject();
 
-  // load the camera info
+    // load the camera info
     const json::Object *cam = rootObj->fieldAsObject ("camera");
     if ((cam == nullptr)
     ||  loadSize (cam->fieldAsObject ("size"), this->_wid, this->_ht)
@@ -129,44 +129,58 @@ bool Scene::load (std::string const &path)
         return true;
     }
 
-  // load the lighting information
-    const json::Object *light = rootObj->fieldAsObject ("lighting");
+    // load the lighting information
+    const json::Object *lighting = rootObj->fieldAsObject ("lighting");
     if ((light == nullptr)
-    ||  loadVec3 (light->fieldAsObject ("direction"), this->_lightDir)
-    ||  loadColor (light->fieldAsObject ("intensity"), this->_lightI)
-    ||  loadColor (light->fieldAsObject ("ambient"), this->_ambI)) {
+    ||  loadColor (lighting->fieldAsObject ("ambient"), this->_ambI)) {
         std::cerr << "Invalid scene description in \"" << path
-            << "\"; bad lighting" << std::endl;
+            << "\"; bad lighting\n";
         return true;
     }
-  //! make sure that the light direction is a unit vector
-    this->_lightDir = glm::normalize(this->_lightDir);
-  //! make sure that color values are in 0..1 range
-    this->_lightI = glm::clamp(this->_lightI, 0.0f, 1.0f);
+    // make sure that the ambient-light intensity is in 0..1 range
     this->_ambI = glm::clamp(this->_ambI, 0.0f, 1.0f);
+    // get the array of point lights
+    json::Array const *lights = light->fieldAsArray("lights");
+    if ((lights == nullptr) || (lights->length() == 0)) {
+        std::cerr << "Invalid scene description in \"" << path
+            << "\"; bad lights array\n";
+        return true;
+    }
+    for (int i = 0;  i < lights->length();  i++) {
+        PointLight light{};
+        if (loadVec3 (light->fieldAsObject ("pos"), light.pos)
+        ||  loadColor (light->fieldAsObject ("intensity"), light.intensity)) {
+            std::cerr << "Invalid scene description in \"" << path
+                << "\"; bad lighting\n";
+            return true;
+        }
+/* TODO: get attenuation coefficients */
+        // make sure that the light intensity is in 0..1 range
+        light.intensity = glm::clamp(light.intensity, 0.0f, 1.0f);
+    }
 
-  // get the object array from the JSON tree and check that it is non-empty
+    // get the object array from the JSON tree and check that it is non-empty
     json::Array const *objs = rootObj->fieldAsArray("objects");
     if ((objs == nullptr) || (objs->length() == 0)) {
         std::cerr << "Invalid scene description in \"" << path
-            << "\"; bad objects array" << std::endl;
+            << "\"; bad objects array\n";
         return true;
     }
 
-  // allocate space for the objects in the scene
+    // allocate space for the objects in the scene
     this->_objs.resize(objs->length());
 
-  // we use a map to keep track of which models have already been loaded
+    // we use a map to keep track of which models have already been loaded
     std::map<std::string, int> objMap;
     std::map<std::string, int>::iterator it;
 
-  // load the objects in the scene
+    // load the objects in the scene
     int numModels = 0;
     for (int i = 0;  i < objs->length();  i++) {
         json::Object const *object = (*objs)[i]->asObject();
         if (object == nullptr) {
             std::cerr << "Expected array of JSON objects for field 'objects' in \""
-                << path << "\"" << std::endl;
+                << path << "\"\n";
             return true;
         }
         json::String const *file = object->fieldAsString("file");
@@ -181,21 +195,21 @@ bool Scene::load (std::string const &path)
             std::cerr << "Invalid objects description in \"" << path << "\"" << std::endl;
             return true;
         }
-      // have we already loaded this model?
+        // have we already loaded this model?
         it = objMap.find(file->value());
         int modelId;
         if (it != objMap.end()) {
             modelId = it->second;
         }
         else {
-          // load the model from the file sytem and add it to the map
+            // load the model from the file sytem and add it to the map
             modelId = numModels++;
             OBJ::Model *model = new OBJ::Model (sceneDir + file->value());
             this->_models.push_back(model);
             objMap.insert (std::pair<std::string, int> (file->value(), modelId));
         }
         this->_objs[i].model = modelId;
-      // set the object-space to world-space transform
+        // set the object-space to world-space transform
         this->_objs[i].toWorld = glm::mat4 (
             glm::vec4 (xAxis, 0.0f),
             glm::vec4 (yAxis, 0.0f),
@@ -203,7 +217,7 @@ bool Scene::load (std::string const &path)
             glm::vec4 (pos, 1.0f));
     }
 
-  // load the texture images used by the materials in the models
+    // load the texture images used by the materials in the models
     for (auto modIt = this->_models.begin();  modIt != this->_models.end();  modIt++) {
         const OBJ::Model *model = *modIt;
         for (auto grpIt = model->beginGroups();  grpIt != model->endGroups();  grpIt++) {
@@ -213,7 +227,39 @@ bool Scene::load (std::string const &path)
         }
     }
 
-  // free up the space used by the JSON object
+    // load the ground information (if present)
+    const JSON::Object *ground = rootObj->fieldAsObject ("ground");
+    if (ground != nullptr) {
+        float wid, ht;
+        float vScale;
+        cs237::color3f color;
+        JSON::String const *hf = ground->fieldAsString("height-field");
+        JSON::String const *cmap = ground->fieldAsString("color-map");
+        JSON::String const *nmap = ground->fieldAsString("normal-map");
+        if ((hf == nullptr) || (cmap == nullptr) || (nmap == nullptr)
+        ||  LoadSize (ground->fieldAsObject("size"), wid, ht)
+        ||  LoadFloat (ground->fieldAsNumber ("v-scale"), vScale)
+        ||  LoadColor (ground->fieldAsObject("color"), color)) {
+            std::cerr << "Invalid ground description in \"" << path << "\"\n";
+            return true;
+        }
+        // load the color-map and normal-map textures
+        this->_loadTexture (sceneDir, cmap->value());
+        cs237::Image2D *cmapImg = this->textureByName (cmap->value());
+        this->_loadTexture (sceneDir, nmap->value());
+        cs237::Image2D *nmapImg = this->textureByName (nmap->value());
+        this->_hf = new HeightField (sceneDir + hf->value(), wid, ht, vScale, color, cmapImg, nmapImg);
+    }
+    else {
+        this->_hf = nullptr;
+    }
+
+    if ((ground == nullptr) && (objs->length() == 0)) {
+        std::cerr << "Invalid empty scene description in \"" << path << "\"\n";
+        return true;
+    }
+
+    // free up the space used by the JSON object
     delete root;
 
     return false;
@@ -224,13 +270,13 @@ void Scene::_loadTexture (std::string path, std::string name)
     if (name.empty()) {
         return;
     }
-  // have we already loaded this texture?
+    // have we already loaded this texture?
     if (this->_texs.find(name) != this->_texs.end()) {
         return;
     }
-  // load the image data;
+    // load the image data;
     cs237::Image2D *img = new cs237::Image2D(path + name);
-  // add to _texs map
+    // add to _texs map
     this->_texs.insert (std::pair<std::string, cs237::Image2D *>(name, img));
 
 }

@@ -30,6 +30,13 @@ struct SceneObj {
     glm::vec3 color;    //!< the color of the object
 };
 
+//! a point light in the scene
+struct PointLight {
+    glm::vec3 pos;      //!< world-space coordinates of light
+    glm::vec3 intensity; //!< the light's intensity
+    float k0, k1, k2;   //!< attenuation coefficients
+};
+
 //! a scene consisting of an initial camera configuration and some objects
 class Scene {
   public:
@@ -61,6 +68,15 @@ class Scene {
   //! the initial camera up vector
     glm::vec3 cameraUp () const { return this->_camUp; }
 
+  //! the number of lights in the scene
+    int numLights () const { return this->_lights.size(); }
+
+  //! iterator for looping over the lights in the scene
+    std::vector<PointLight>::const_iterator beginLights ()  { return this->_lights.cbegin(); }
+
+  //! terminator for looping over the lights in the scene
+    std::vector<PointLight>::const_iterator endLights () const { return this->_lights.cend(); }
+
   //! the light's unit-length direction vector
     glm::vec3 lightDir () const { return this->_lightDir; }
 
@@ -78,10 +94,10 @@ class Scene {
     int numObjects () const { return this->_objs.size(); }
 
   //! iterator for looping over the objects in the scene
-    std::vector<SceneObj>::const_iterator beginObjs () const { return this->_objs.begin(); }
+    std::vector<SceneObj>::const_iterator beginObjs () const { return this->_objs.cbegin(); }
 
   //! terminator for looping over the objects in the scene
-    std::vector<SceneObj>::const_iterator endObjs () const { return this->_objs.end(); }
+    std::vector<SceneObj>::const_iterator endObjs () const { return this->_objs.cend(); }
 
   //! return the i'th object in the scene
     SceneObj const object (int idx) const { return this->_objs[idx]; }
@@ -92,13 +108,13 @@ class Scene {
   //! iterator for looping over the models in the scene
     std::vector<OBJ::Model const *>::const_iterator beginModels () const
     {
-        return this->_models.begin();
+        return this->_models.cbegin();
     }
 
   //! terminator for looping over the models in the scene
     std::vector<OBJ::Model const *>::const_iterator endModels () const
     {
-        return this->_models.end();
+        return this->_models.cend();
     }
 
   //! return the i'th model in the scene
@@ -117,12 +133,11 @@ class Scene {
     glm::vec3 _camPos;          //!< camera position
     glm::vec3 _camAt;           //!< the point at which the camera is pointing at
     glm::vec3 _camUp;           //!< the camera's up vector
-    glm::vec3 _lightDir;        //!< unit vector that specifies the light's direction
-    glm::vec3 _lightI;          //!< the directional light's intensity
     glm::vec3 _ambI;            //!< the ambient light's intensity
 
     std::vector<OBJ::Model const *> _models;            //!< the OBJ models in the scene
     std::vector<SceneObj> _objs;                        //!< the objects in the scene
+    std::vector<PointLight> _lights;                    //!< the lights in the scene
     std::map<std::string, cs237::Image2D *> _texs;      //!< the textures keyed by name
     HeightField *_hf;           //!< the height field that represents the ground; nullptr if
                                 //!  the scene does not have a ground Object
