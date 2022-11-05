@@ -25,10 +25,13 @@ struct Instance {
                                 //!< gets freed once when we are deallocating the
                                 //!< instances in the scene.
     glm::vec3 pos;              //!< the position of the object in world space
-    glm::vec3 color;            //!< the color of the object
+    glm::vec3 color;            //!< the wireframe/flat color of the object
     glm::mat4 toWorld;          //!< affine transform from object space to world space
     glm::mat3 normToWorld;      //!< linear transform that maps object-space normals
                                 //!  to world-space normals
+/** HINT: you may want to add additional fields to track the Vulkan state associated
+ ** with the instance.
+ **/
 };
 
 #endif /*! _INSTANCE_HPP_ */

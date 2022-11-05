@@ -5,7 +5,7 @@
  * \author John Reppy
  */
 
-/* CMSC23700 Project 1 sample code (Autumn 2022)
+/* CMSC23700 Project 2 sample code (Autumn 2022)
  *
  * COPYRIGHT (c) 2022 John Reppy (http://www.cs.uchicago.edu/~jhr)
  * All rights reserved.
@@ -27,15 +27,18 @@ struct Mesh {
     VkPrimitiveTopology prim;   //!< the primitive type for rendering the mesh
                                 //!  (e.g., VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
     int nIndices;               //!< the number of vertex indices
-    cs237::Texture2D *tex;      //!< the texture for the object
+    cs237::Texture2D *cMap;     //!< the color-map texture for the object
+    cs237::Texture2D *nMap;     //!< the normal-map texture for the object
 
-    //! create a Mesh object by allocating buffers for it.  The buffer data is
-    //! loaded separately.
+    //! create a Mesh object for an OBJ group by allocating buffers for it.
     //! \param app  the owning app
-    //! \param p    the topology of the vertices; for Project 1, it should
+    //! \param p    the topology of the vertices; for Project 2, it should
     //!             be VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
     //! \param grp  a `Group` from an object that this mesh defines
     Mesh (cs237::Application *app, VkPrimitiveTopology p, OBJ::Group const &grp);
+
+    //! create a Mesh object for a height-field
+    Mesh (cs237::Application *app, HeightField *hf);
 
     //! Mesh destuctor
     ~Mesh ();
