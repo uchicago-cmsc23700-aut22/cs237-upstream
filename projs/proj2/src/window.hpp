@@ -16,13 +16,7 @@
 #include "cs237.hpp"
 #include "app.hpp"
 #include "instance.hpp"
-
-//! the different rendering modes
-constexpr int kWireframe = 0;           //!< wireframe mode
-constexpr int kFlat = 1;                //!< flat shading mode
-constexpr int kDiffuse = 2;             //!< diffuse lighting
-constexpr int kTextured = 3;            //!< textured shading
-constexpr int kNumModes = 4;
+#include "render-modes.hpp"
 
 //! The Project 1 Window class
 class Proj2Window : public cs237::Window {
@@ -48,6 +42,7 @@ private:
     glm::vec3 _camPos;                          //!< camera position in world space
     glm::vec3 _camAt;                           //!< camera look-at point in world space
     glm::vec3 _camUp;                           //!< camera up vector in world space
+    float _fov;                                 //!< horizontal field of view
 
     /** HINT: you will need to define the structures that you use to manage
      ** the rendering modes.

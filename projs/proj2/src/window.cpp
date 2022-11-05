@@ -22,6 +22,7 @@ Proj2Window::Proj2Window (Proj2 *app)
     this->_camPos = app->scene()->cameraPos();
     this->_camAt = app->scene()->cameraLookAt();
     this->_camUp = app->scene()->cameraUp();
+    this->_fov = app->scene()->horizontalFOV();
 
     this->_initRenderPass ();
 
@@ -140,7 +141,12 @@ void Proj2Window::key (int key, int scancode, int action, int mods)
                     this->_mode = kFlat;
                 }
                 break;
-            case GLFW_KEY_T:  // 'q' or 'Q' ==> quit
+            case GLFW_KEY_N:  // 'n' or 'N' ==> switch to normal mode
+                if (this->_mode != kNormal) {
+                    this->_mode = kNormal;
+                }
+                break;
+            case GLFW_KEY_T:  // 't' or 'T' ==> switch to textured mode
                 if (this->_mode != kTextured) {
                     this->_mode = kTextured;
                 }
