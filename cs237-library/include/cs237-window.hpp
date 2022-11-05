@@ -259,10 +259,14 @@ protected:
     //! This is a wrapper to allow subclasses access to this information
     uint32_t _presentationQIdx () const { return this->_app->_qIdxs.present; }
 
-    //! \brief add a viewport command to the command buffer; this also sets the
-    //!        scissor rectangle to the whole window.
+    //! \brief add a command to set the viewport and scissor to the whole window.
     //! \param cmdBuf   the command buffer
     void _setViewportCmd (VkCommandBuffer cmdBuf);
+
+    //! \brief add a viewport command to the command buffer; this also sets the
+    //!        scissor rectangle.
+    //! \param cmdBuf   the command buffer
+    void _setViewportCmd (VkCommandBuffer cmdBuf, uint32_t wid, uint32_t ht);
 
     //! \brief create and initialize a command buffer
     //! \return the fresh command buffer

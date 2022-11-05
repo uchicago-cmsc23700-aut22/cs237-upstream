@@ -386,22 +386,26 @@ void Window::_initAttachments (
     }
 }
 
-void Window::_setViewportCmd (VkCommandBuffer cmdBuf)
+void Window::_setViewportCmd (VkCommandBuffer cmdBuf, uint32_t wid, uint32_t ht)
 {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = float(this->_swap.extent.width);
-    viewport.height = float(this->_swap.extent.height);
+    viewport.width = float(wid);
+    viewport.height = float(ht);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = this->_swap.extent;
+    scissor.extent = {wid, ht};
     vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+}
 
+void Window::_setViewportCmd (VkCommandBuffer cmdBuf)
+{
+    this->_setViewportCmd(cmdBuf, this->_swap.extent.width, this->_swap.extent.height);
 }
 
 
