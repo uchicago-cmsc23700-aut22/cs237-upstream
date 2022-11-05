@@ -161,9 +161,9 @@ bool Scene::load (std::string const &path)
     }
     // make sure that the ambient-light intensity is in 0..1 range
     this->_ambI = glm::clamp(this->_ambI, 0.0f, 1.0f);
-    // get the array of point lights
+    // get the array of point lights; we allow at most 4 lights
     json::Array const *lights = lighting->fieldAsArray("lights");
-    if ((lights == nullptr) || (lights->length() == 0)) {
+    if ((lights == nullptr) || (lights->length() == 0) || (lights->length() > 4)) {
         std::cerr << "Invalid scene description in \"" << path
             << "\"; bad lights array\n";
         return true;
