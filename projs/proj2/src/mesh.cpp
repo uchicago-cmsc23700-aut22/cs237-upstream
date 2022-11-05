@@ -53,13 +53,34 @@ Mesh::Mesh (cs237::Application *app, VkPrimitiveTopology p, OBJ::Group const &gr
 
 Mesh::Mesh (cs237::Application *app, HeightField *hf)
   : vBuf(nullptr), vBufMem(nullptr), iBuf(nullptr), iBufMem(nullptr),
-    prim(0 /** HINT: your choice */), nIndices(grp.nIndices)
+    prim(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
 {
+    // allocate the vertex buffer
+    this->vBuf = new cs237::VertexBuffer(app, hf->numVerts() * sizeof(Vertex));
+    this->vBufMem = new cs237::MemoryObj(app, this->vBuf->requirements());
+    this->vBuf->bindMemory(this->vBufMem);
+
+    /** HINT: you will need to compute the Vertex values for the grid points in
+     ** the heightfield and then initialize the vertex buffer.
+     */
+
+    /** HINT: you will need to create and intialize the index buffer; the indices
+     ** will depend on the topology that you choose.  Remember to initialize the
+     ** nIndices field.
+     **/
+
+    /** HINT: other initialization, such as color and normal maps */
 }
 
 Mesh::~Mesh ()
 {
-    /** HINT: delete Vulkan resources here */
+    delete this->cMap;
+    delete this->nMap;
+    delete this->vBufMem;
+    delete this->vBuf;
+    delete this->iBufMem;
+    delete this->iBuf;
+
 }
 
 void Mesh::draw (VkCommandBuffer cmdBuf)
