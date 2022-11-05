@@ -13,6 +13,10 @@ project(CMSC237_PROJ_2
   HOMEPAGE_URL "https://classes.cs.uchicago.edu/archive/2022/fall/23700-1/index.html"
   LANGUAGES C CXX)
 
+# uncomment the following directive if you have implemented the extra credit
+#
+#add_compile_definitions(PROJ2_EXTRA_CREDIT)
+
 # shader source code
 #
 add_subdirectory(shaders)

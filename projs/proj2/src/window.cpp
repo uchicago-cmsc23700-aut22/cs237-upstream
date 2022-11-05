@@ -151,11 +151,19 @@ void Proj2Window::key (int key, int scancode, int action, int mods)
                     this->_mode = kTextured;
                 }
                 break;
-            case GLFW_KEY_W:  // 'q' or 'Q' ==> quit
+            case GLFW_KEY_W:  // 'w' or 'W' ==> switch to wireframe mode
                 if (this->_mode != kWireframe) {
                     this->_mode = kWireframe;
                 }
                 break;
+
+#ifdef PROJ2_EXTRA_CREDIT
+            case GLFW_KEY_X:  // 'x' or 'X' ==> extreme mode: both normals and texturing
+                if (this->_mode != kExtreme) {
+                    this->_mode = kExtreme;
+                }
+                break;
+#endif
 
             case GLFW_KEY_Q:  // 'q' or 'Q' ==> quit
                 glfwSetWindowShouldClose (this->_win, true);
