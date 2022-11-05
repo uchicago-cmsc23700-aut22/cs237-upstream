@@ -23,14 +23,16 @@
  */
 constexpr int kCoordAttrLoc = 0;        //!< location of vertex coordinates attribute
 constexpr int kNormAttrLoc = 1;         //!< location of normal-vector attribute
-constexpr int kTexCoordAttrLoc = 2;     //!< location of texture coordinates attribute
-constexpr int kNumVertexAttrs = 3;      //!< number of vertex attributes
+constexpr int kTanAttrLoc = 2;          //!< location of tangent-vector attribute
+constexpr int kTexCoordAttrLoc = 3;     //!< location of texture coordinates attribute
+constexpr int kNumVertexAttrs = 4;      //!< number of vertex attributes
 
 //! 3D mesh vertices with normals, texture coordinates, and bitangent vectors
 //
 struct Vertex {
     glm::vec3 pos;      //! vertex position
     glm::vec3 norm;     //! vertex normal
+    glm::vec4 tan;      //! tangent vector (plus signed w component)
     glm::vec2 txtCoord; //! texture coordinates
 
     static std::vector<VkVertexInputBindingDescription> getBindingDescriptions()
@@ -58,6 +60,12 @@ struct Vertex {
         attrs[kNormAttrLoc].location = kNormAttrLoc;
         attrs[kNormAttrLoc].format = VK_FORMAT_R32G32B32_SFLOAT;
         attrs[kNormAttrLoc].offset = offsetof(Vertex, norm);
+
+        // norm
+        attrs[kTanAttrLoc].binding = 0;
+        attrs[kTanAttrLoc].location = kTanAttrLoc;
+        attrs[kTanAttrLoc].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attrs[kTanAttrLoc].offset = offsetof(Vertex, tan);
 
         // txtCoord
         attrs[kTexCoordAttrLoc].binding = 0;
