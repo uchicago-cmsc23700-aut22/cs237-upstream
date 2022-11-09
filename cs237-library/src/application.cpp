@@ -37,7 +37,8 @@ Application::Application (std::vector<const char *> &args, std::string const &na
   : _name(name),
     _messages(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT),
     _debug(0),
-    _gpu(VK_NULL_HANDLE)
+    _gpu(VK_NULL_HANDLE),
+    _propsCache(nullptr)
 {
     // process the command-line arguments
     for (auto it = args.cbegin();  it != args.cend();  ++it) {
