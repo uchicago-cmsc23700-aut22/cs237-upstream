@@ -102,6 +102,11 @@ Window::Window (Application *app, CreateWindowInfo const &info)
     this->_wid = info.wid;
     this->_ht = info.ht;
     this->_isVis = true;
+    this->_keyEnabled = false;
+    this->_cursorPosEnabled = false;
+    this->_cursorEnterEnabled = false;
+    this->_mouseButtonEnabled = false;
+    this->_scrollEnabled = false;
 
     // set up the Vulkan surface for the window
     if (glfwCreateWindowSurface(app->_instance, window, nullptr, &this->_surf) != VK_SUCCESS) {
