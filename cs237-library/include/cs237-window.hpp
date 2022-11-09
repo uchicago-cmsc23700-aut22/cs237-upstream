@@ -259,14 +259,23 @@ protected:
     //! This is a wrapper to allow subclasses access to this information
     uint32_t _presentationQIdx () const { return this->_app->_qIdxs.present; }
 
-    //! \brief add a command to set the viewport and scissor to the whole window.
+    //! \brief add a command to set the viewport and scissor to the whole window
+    //!        using the OpenGL convention of Y increasing up the screen.
     //! \param cmdBuf   the command buffer
+    //!
+    //! Vulkan follows the Direct3D convention of using a right-handed NDC
+    //! space, which means that Y = 0 maps to the top of the screen, instead
+    //! of the bottom (as in OpenGL).  Since our data is all organized for
+    //! OpenGL-style rendering, we flip the Y axis here.  Use the other version
+    //! of `_setViewportCmd` to follow the Vulkan convention.
     void _setViewportCmd (VkCommandBuffer cmdBuf);
 
     //! \brief add a viewport command to the command buffer; this also sets the
     //!        scissor rectangle.
     //! \param cmdBuf   the command buffer
-    void _setViewportCmd (VkCommandBuffer cmdBuf, uint32_t wid, uint32_t ht);
+    void _setViewportCmd (VkCommandBuffer cmdBuf,
+        int32_t x, int32_t y,
+        int32_t wid, int32_t ht);
 
     //! \brief create and initialize a command buffer
     //! \return the fresh command buffer

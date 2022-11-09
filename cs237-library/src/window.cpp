@@ -391,11 +391,13 @@ void Window::_initAttachments (
     }
 }
 
-void Window::_setViewportCmd (VkCommandBuffer cmdBuf, uint32_t wid, uint32_t ht)
+void Window::_setViewportCmd (VkCommandBuffer cmdBuf,
+    int32_t x, int32_t y,
+    int32_t wid, int32_t ht)
 {
     VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.x = float(x);
+    viewport.y = float(y);
     viewport.width = float(wid);
     viewport.height = float(ht);
     viewport.minDepth = 0.0f;
@@ -404,13 +406,22 @@ void Window::_setViewportCmd (VkCommandBuffer cmdBuf, uint32_t wid, uint32_t ht)
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = {wid, ht};
+    scissor.extent = {
+            static_cast<uint32_t>(std::abs(wid)),
+            static_cast<uint32_t>(std::abs(ht))
+        };
     vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 }
 
 void Window::_setViewportCmd (VkCommandBuffer cmdBuf)
 {
-    this->_setViewportCmd(cmdBuf, this->_swap.extent.width, this->_swap.extent.height);
+    /* NOTE: we negate the height and set the Y origin to ht because Vulkan's
+     * viewport coordinates are from top-left down, instead of from bottom-left up.
+     * See https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport
+     */
+    this->_setViewportCmd(cmdBuf,
+        0, this->_swap.extent.height,
+        this->_swap.extent.width, -this->_swap.extent.height);
 }
 
 
