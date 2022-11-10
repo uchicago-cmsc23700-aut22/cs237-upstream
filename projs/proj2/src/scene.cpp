@@ -257,7 +257,7 @@ bool Scene::load (std::string const &path)
         for (auto grpIt = model->beginGroups();  grpIt != model->endGroups();  grpIt++) {
             const OBJ::Material *mat = &model->Material((*grpIt).material);
             this->_loadTexture (sceneDir, mat->diffuseMap);
-            this->_loadTexture (sceneDir, mat->normalMap);  // not used in this project
+            this->_loadTexture (sceneDir, mat->normalMap, true);
         }
     }
 
@@ -280,7 +280,7 @@ bool Scene::load (std::string const &path)
         // load the color-map and normal-map textures
         this->_loadTexture (sceneDir, cmap->value());
         cs237::Image2D *cmapImg = this->textureByName (cmap->value());
-        this->_loadTexture (sceneDir, nmap->value());
+        this->_loadTexture (sceneDir, nmap->value(), true);
         cs237::Image2D *nmapImg = this->textureByName (nmap->value());
         this->_hf = new HeightField (sceneDir + hf->value(), wid, ht, vScale, color, cmapImg, nmapImg);
     }
@@ -299,7 +299,7 @@ bool Scene::load (std::string const &path)
     return false;
 }
 
-void Scene::_loadTexture (std::string path, std::string name)
+void Scene::_loadTexture (std::string path, std::string name, bool nMap)
 {
     if (name.empty()) {
         return;
@@ -309,7 +309,13 @@ void Scene::_loadTexture (std::string path, std::string name)
         return;
     }
     // load the image data;
-    cs237::Image2D *img = new cs237::Image2D(path + name);
+    cs237::Image2D *img;
+    if (nMap) {
+        // normal data should not be sRGB encoded!
+        img = new cs237::DataImage2D(path + name);
+    } else {
+        img = new cs237::Image2D(path + name);
+    }
     // add to _texs map
     this->_texs.insert (std::pair<std::string, cs237::Image2D *>(name, img));
 
