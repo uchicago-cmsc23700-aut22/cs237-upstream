@@ -195,60 +195,56 @@ bool Scene::load (std::string const &path)
 
     // get the object array from the json tree and check that it is non-empty
     json::Array const *objs = rootObj->fieldAsArray("objects");
-    if ((objs == nullptr) || (objs->length() == 0)) {
-        std::cerr << "Invalid scene description in \"" << path
-            << "\"; bad objects array\n";
-        return true;
-    }
+    if ((objs != nullptr) && (objs->length() >= 0)) {
+        // allocate space for the objects in the scene
+        this->_objs.resize(objs->length());
 
-    // allocate space for the objects in the scene
-    this->_objs.resize(objs->length());
+        // we use a map to keep track of which models have already been loaded
+        std::map<std::string, int> objMap;
+        std::map<std::string, int>::iterator it;
 
-    // we use a map to keep track of which models have already been loaded
-    std::map<std::string, int> objMap;
-    std::map<std::string, int>::iterator it;
-
-    // load the objects in the scene
-    int numModels = 0;
-    for (int i = 0;  i < objs->length();  i++) {
-        json::Object const *object = (*objs)[i]->asObject();
-        if (object == nullptr) {
-            std::cerr << "Expected array of json objects for field 'objects' in \""
-                << path << "\"\n";
-            return true;
+        // load the objects in the scene
+        int numModels = 0;
+        for (int i = 0;  i < objs->length();  i++) {
+            json::Object const *object = (*objs)[i]->asObject();
+            if (object == nullptr) {
+                std::cerr << "Expected array of json objects for field 'objects' in \""
+                    << path << "\"\n";
+                return true;
+            }
+            json::String const *file = object->fieldAsString("file");
+            json::Object const *frame = object->fieldAsObject("frame");
+            glm::vec3 pos, xAxis, yAxis, zAxis;
+            if ((file == nullptr) || (frame == nullptr)
+            ||  loadVec3 (object->fieldAsObject("pos"), pos)
+            ||  loadVec3 (frame->fieldAsObject("x-axis"), xAxis)
+            ||  loadVec3 (frame->fieldAsObject("y-axis"), yAxis)
+            ||  loadVec3 (frame->fieldAsObject("z-axis"), zAxis)
+            ||  loadColor (object->fieldAsObject("color"), this->_objs[i].color)) {
+                std::cerr << "Invalid objects description in \"" << path << "\"\n";
+                return true;
+            }
+            // have we already loaded this model?
+            it = objMap.find(file->value());
+            int modelId;
+            if (it != objMap.end()) {
+                modelId = it->second;
+            }
+            else {
+                // load the model from the file sytem and add it to the map
+                modelId = numModels++;
+                OBJ::Model *model = new OBJ::Model (sceneDir + file->value());
+                this->_models.push_back(model);
+                objMap.insert (std::pair<std::string, int> (file->value(), modelId));
+            }
+            this->_objs[i].model = modelId;
+            // set the object-space to world-space transform
+            this->_objs[i].toWorld = glm::mat4 (
+                glm::vec4 (xAxis, 0.0f),
+                glm::vec4 (yAxis, 0.0f),
+                glm::vec4 (zAxis, 0.0f),
+                glm::vec4 (pos, 1.0f));
         }
-        json::String const *file = object->fieldAsString("file");
-        json::Object const *frame = object->fieldAsObject("frame");
-        glm::vec3 pos, xAxis, yAxis, zAxis;
-        if ((file == nullptr) || (frame == nullptr)
-        ||  loadVec3 (object->fieldAsObject("pos"), pos)
-        ||  loadVec3 (frame->fieldAsObject("x-axis"), xAxis)
-        ||  loadVec3 (frame->fieldAsObject("y-axis"), yAxis)
-        ||  loadVec3 (frame->fieldAsObject("z-axis"), zAxis)
-        ||  loadColor (object->fieldAsObject("color"), this->_objs[i].color)) {
-            std::cerr << "Invalid objects description in \"" << path << "\"\n";
-            return true;
-        }
-        // have we already loaded this model?
-        it = objMap.find(file->value());
-        int modelId;
-        if (it != objMap.end()) {
-            modelId = it->second;
-        }
-        else {
-            // load the model from the file sytem and add it to the map
-            modelId = numModels++;
-            OBJ::Model *model = new OBJ::Model (sceneDir + file->value());
-            this->_models.push_back(model);
-            objMap.insert (std::pair<std::string, int> (file->value(), modelId));
-        }
-        this->_objs[i].model = modelId;
-        // set the object-space to world-space transform
-        this->_objs[i].toWorld = glm::mat4 (
-            glm::vec4 (xAxis, 0.0f),
-            glm::vec4 (yAxis, 0.0f),
-            glm::vec4 (zAxis, 0.0f),
-            glm::vec4 (pos, 1.0f));
     }
 
     // load the texture images used by the materials in the models
@@ -288,7 +284,7 @@ bool Scene::load (std::string const &path)
         this->_hf = nullptr;
     }
 
-    if ((ground == nullptr) && (objs->length() == 0)) {
+    if ((ground == nullptr) && (objs == nullptr || objs->length() == 0)) {
         std::cerr << "Invalid empty scene description in \"" << path << "\"\n";
         return true;
     }
