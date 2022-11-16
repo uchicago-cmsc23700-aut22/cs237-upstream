@@ -53,7 +53,7 @@ std::string to_string (ChannelTy ty);
 namespace __detail {
 
     //! \brief convert an image format and channel type to a Vulkan image format
-    VkFormat toVkFormat (Channels chans, ChannelTy ty);
+    VkFormat toVkFormat (Channels chans, ChannelTy ty, bool sRGB);
 
     class ImageBase {
     public:
@@ -64,7 +64,7 @@ namespace __detail {
         //! returns the type of the channels
         ChannelTy type () const { return this->_type; }
         //! return the vulkan format of the image data
-        VkFormat format () const { return toVkFormat(this->_chans, this->_type); }
+        VkFormat format () const { return toVkFormat(this->_chans, this->_type, this->_sRGB); }
         //! the data pointer
         void *data () const { return this->_data; }
         //! the total number of bytes of image data
@@ -88,15 +88,16 @@ namespace __detail {
         uint32_t _nDims;        //!< the number of dimensions (1 or 2)
         Channels _chans;        //!< the texture format
         ChannelTy _type;        //!< the representation type of the data
+        bool _sRGB;             //!< should the image be interpreted as an sRGB encoded image?
         size_t _nBytes;         //!< size in bytes of image data
         void *_data;            //!< the raw image data
 
         explicit ImageBase ()
-          : _nDims(0), _chans(Channels::UNKNOWN), _type(ChannelTy::UNKNOWN),
+          : _nDims(0), _chans(Channels::UNKNOWN), _type(ChannelTy::UNKNOWN), _sRGB(false),
             _nBytes(0), _data(nullptr)
         { }
         explicit ImageBase (uint32_t nd)
-          : _nDims(nd), _chans(Channels::UNKNOWN), _type(ChannelTy::UNKNOWN),
+          : _nDims(nd), _chans(Channels::UNKNOWN), _type(ChannelTy::UNKNOWN), _sRGB(false),
             _nBytes(0), _data(nullptr)
         { }
         explicit ImageBase (uint32_t nd, Channels chans, ChannelTy ty, size_t nPixels);
@@ -132,7 +133,9 @@ class Image1D : public __detail::ImageBase {
     uint32_t _wid;      //!< the width of the image in pixels
 };
 
-/* 2D images */
+//! A 2D Image; by default, it is assumed to store color data, which means that
+//! RGB data will be interpreted as being sRGB encoded.  Use the `DataImage2D`
+//! class to represent unencoded image data.
 class Image2D : public __detail::ImageBase {
   public:
   //! create and allocate space for an uninitialized image
@@ -189,9 +192,45 @@ class Image2D : public __detail::ImageBase {
   //! format and sample type.
     void bitblt (Image2D const &src, uint32_t row, uint32_t col);
 
-  private:
+  protected:
     uint32_t _wid;      //!< the width of the image in pixels
     uint32_t _ht;       //!< the height of the image in pixels
+};
+
+//! A 2D Image used to store 2D data, such as a normal map.
+class DataImage2D : public Image2D {
+  public:
+  //! create and allocate space for an uninitialized image
+  //! \param wid the width of the image
+  //! \param ht the height of the image
+  //! \param chans the image format
+  //! \param ty the type of the elements
+    DataImage2D (uint32_t wid, uint32_t ht, Channels chans, ChannelTy ty)
+      : Image2D (wid, ht, chans, ty)
+    {
+        this->_sRGB = false;
+    }
+
+  //! create and initialize an image from a PNG file.
+  //! \param file the name of the PNG file
+  //! \param flip set to true if the image should be flipped vertically to match OpenGL
+  //!        texture coordinates (default true)
+    DataImage2D (std::string const &file, bool flip = true)
+      : Image2D (file, flip)
+    {
+        this->_sRGB = false;
+    }
+
+  //! create and initialize an image from a PNG-format input stream
+  //! \param inS the input stream
+  //! \param flip set to true if the image should be flipped vertically to match OpenGL
+  //!        texture coordinates (default true)
+    DataImage2D (std::ifstream &inS, bool flip = true)
+      : Image2D (inS, flip)
+    {
+        this->_sRGB = false;
+    }
+
 };
 
 } /* namespace cs237 */

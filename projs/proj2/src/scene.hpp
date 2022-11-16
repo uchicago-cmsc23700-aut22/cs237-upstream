@@ -137,8 +137,11 @@ class Scene {
     HeightField *_hf;           //!< the height field that represents the ground; nullptr if
                                 //!  the scene does not have a ground Object
 
-  //! helper function for loading textures into the _texs map
-    void _loadTexture (std::string path, std::string name);
+    //! helper function for loading textures into the _texs map
+    //! \param path  the path to the directory containing the image file
+    //! \param name  the name of the file
+    //! \param nMap  optional argument specifying if the texture is a normal map (default false).
+    void _loadTexture (std::string path, std::string name, bool nMap = false);
 
 };
 

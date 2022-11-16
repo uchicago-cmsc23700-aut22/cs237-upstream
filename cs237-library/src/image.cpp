@@ -73,12 +73,13 @@ static void readData (png_struct *pngPtr, png_bytep data, png_size_t length)
 //! \param flip true if the rows of the image should be flipped to match OpenGL coordinates
 //! \param widOut output variable for the image width
 //! \param htOut output variable for the image height (nullptr for 1D images)
-//! \param fmtOut output variable for the OpenGL pixel format
-//! \param tyOut output variable for the OpenGL pixel type
+//! \param fmtOut output variable for the channel format
+//! \param tyOut output variable for the channel representation type
+//! \param sRGBOut output variable set to true if the image should be interpreted as sRGB
 //! \return a pointer to the image data, or nullptr on error
 void *readPNG (
     std::ifstream &inS, bool flip, uint32_t *widOut, uint32_t *htOut,
-    Channels *fmtOut, ChannelTy *tyOut)
+    Channels *fmtOut, ChannelTy *tyOut, bool *sRGBOut)
 {
   /* check PNG signature */
     unsigned char sig[8];
@@ -146,6 +147,7 @@ void *readPNG (
 
     Channels fmt;
     ChannelTy ty;
+    bool sRGB = false;
     switch (colorType) {
       case PNG_COLOR_TYPE_GRAY:
         fmt = Channels::R;
@@ -188,6 +190,9 @@ void *readPNG (
             bytesPerPixel = 6;
             ty = ChannelTy::U16;
         }
+        // assume that any 3-channel color image is sRGB, since figuring this out from the
+        // PNG file does not seem reliable
+        sRGB = true;
         break;
       case PNG_COLOR_TYPE_RGB_ALPHA:
         fmt = Channels::RGBA;
@@ -199,6 +204,9 @@ void *readPNG (
             bytesPerPixel = 8;
             ty = ChannelTy::U16;
         }
+        // assume that any 3-channel color image is sRGB, since figuring this out from the
+        // PNG file does not seem reliable
+        sRGB = true;
         break;
       default:
 #ifndef NDEBUG
@@ -253,6 +261,9 @@ void *readPNG (
     if (htOut != nullptr) *htOut = height;
     *fmtOut = fmt;
     *tyOut = ty;
+    if (sRGBOut != nullptr) {
+        *sRGBOut = sRGB;
+    }
 
     return img;
 
@@ -409,7 +420,7 @@ bool writePNG (
 } /* writePNG */
 
 namespace __detail {
-VkFormat toVkFormat (Channels chans, ChannelTy ty)
+VkFormat toVkFormat (Channels chans, ChannelTy ty, bool isRGB)
 {
     switch (chans) {
     case Channels::R: switch (ty) {
@@ -433,7 +444,7 @@ VkFormat toVkFormat (Channels chans, ChannelTy ty)
         case ChannelTy::UNKNOWN: ERROR("unknown channel type");
         };
     case Channels::RGB: switch (ty) {
-        case ChannelTy::U8: return VK_FORMAT_R8G8B8_SRGB;
+        case ChannelTy::U8: return (isRGB ? VK_FORMAT_R8G8B8_SRGB : VK_FORMAT_R8G8B8_UNORM);
         case ChannelTy::S8: return VK_FORMAT_R8G8B8_SINT;
         case ChannelTy::U16: return VK_FORMAT_R16G16B16_UINT;
         case ChannelTy::S16: return VK_FORMAT_R16G16B16_SINT;
@@ -443,12 +454,12 @@ VkFormat toVkFormat (Channels chans, ChannelTy ty)
         case ChannelTy::UNKNOWN: ERROR("unknown channel type");
         };
     case Channels::BGR: switch (ty) {
-        case ChannelTy::U8: return VK_FORMAT_B8G8R8_SRGB;
+        case ChannelTy::U8: return (isRGB ? VK_FORMAT_B8G8R8_SRGB : VK_FORMAT_B8G8R8_UNORM);
         case ChannelTy::S8: return VK_FORMAT_B8G8R8_SINT;
         default: ERROR("invalid channel type for BGR");
         };
     case Channels::RGBA: switch (ty) {
-        case ChannelTy::U8: return VK_FORMAT_R8G8B8A8_SRGB;
+        case ChannelTy::U8: return (isRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM);
         case ChannelTy::S8: return VK_FORMAT_R8G8B8A8_SINT;
         case ChannelTy::U16: return VK_FORMAT_R16G16B16A16_UINT;
         case ChannelTy::S16: return VK_FORMAT_R16G16B16A16_SINT;
@@ -458,7 +469,7 @@ VkFormat toVkFormat (Channels chans, ChannelTy ty)
         case ChannelTy::UNKNOWN: ERROR("unknown channel type");
         };
     case Channels::BGRA: switch (ty) {
-        case ChannelTy::U8: return VK_FORMAT_B8G8R8A8_SRGB;
+        case ChannelTy::U8: return (isRGB ? VK_FORMAT_B8G8R8A8_SRGB : VK_FORMAT_B8G8R8A8_UNORM);
         case ChannelTy::S8: return VK_FORMAT_B8G8R8A8_SINT;
         default: ERROR("invalid channel type for BGRA");
         };
@@ -567,7 +578,8 @@ Image1D::Image1D (std::string const &file)
         exit (1);
     }
 
-    this->_data = readPNG(inS, false, &this->_wid, nullptr, &this->_chans, &this->_type);
+    this->_data = readPNG(
+        inS, false, &this->_wid, nullptr, &this->_chans, &this->_type, &this->_sRGB);
     if (this->_data == nullptr) {
         inS.close();
         std::cerr << "Image2D::Image1D: unable to load image file \"" << file << "\"" << std::endl;
@@ -622,7 +634,8 @@ Image2D::Image2D (std::string const &file, bool flip)
         exit (1);
     }
 
-    this->_data = readPNG(inS, flip, &this->_wid, &this->_ht, &this->_chans, &this->_type);
+    this->_data = readPNG(
+        inS, flip, &this->_wid, &this->_ht, &this->_chans, &this->_type, &this->_sRGB);
     if (this->_data == nullptr) {
         inS.close();
         std::cerr << "Image2D::Image2D: unable to load image file \"" << file << "\"" << std::endl;
@@ -642,7 +655,8 @@ Image2D::Image2D (std::string const &file, bool flip)
 Image2D::Image2D (std::ifstream &inS, bool flip)
     : __detail::ImageBase (2)
 {
-    this->_data = readPNG(inS, flip, &this->_wid, &this->_ht, &this->_chans, &this->_type);
+    this->_data = readPNG(
+        inS, flip, &this->_wid, &this->_ht, &this->_chans, &this->_type, &this->_sRGB);
     if (this->_data == nullptr) {
         std::cerr << "Image2D::Image2D: unable to load 2D image" << std::endl;
         exit (1);

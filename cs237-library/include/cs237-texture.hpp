@@ -72,7 +72,7 @@ public:
 class Texture2D : public __detail::TextureBase {
 public:
 
-    //! \brief Construct a 1D texture from a 1D image
+    //! \brief Construct a 2D texture from a 2D image
     //! \param app     the owning application
     //! \param img     the source image for the texture
     //! \param mipmap  if true, generate mipmap levels for the texture.
